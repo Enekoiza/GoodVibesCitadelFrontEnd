@@ -1,12 +1,12 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { apiUrl } from '../../../config/api';
 import { useAuth } from '../../../features/auth/context/AuthContext';
+import { authenticatedFetch } from '../../../features/auth/api/authFetch';
 import { fetchAllUsers, type AppUser } from '../../../features/users/api/usersApi';
 import { RegisterUserModal } from './RegisterUserModal';
 import { UserRolesModal } from './UserRolesModal';
 
 export const UsersCard: React.FC = () => {
-  const { token } = useAuth();
+  const { token, logout } = useAuth();
   const [users, setUsers] = useState<AppUser[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -19,14 +19,14 @@ export const UsersCard: React.FC = () => {
     setIsLoading(true);
     setError(null);
     try {
-      const data = await fetchAllUsers(token);
+      const data = await fetchAllUsers(token, logout);
       setUsers(data);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Error desconocido al cargar los usuarios.');
     } finally {
       setIsLoading(false);
     }
-  }, [token]);
+  }, [logout, token]);
 
   useEffect(() => {
     fetchUsers();
@@ -38,12 +38,11 @@ export const UsersCard: React.FC = () => {
     setDeleteError(null);
 
     try {
-      const response = await fetch(
-        apiUrl(`/api/users/${encodeURIComponent(username)}/delete`),
-        {
-          method: 'DELETE',
-          headers: { 'Authorization': `Bearer ${token}` },
-        }
+      const response = await authenticatedFetch(
+        `/api/users/${encodeURIComponent(username)}/delete`,
+        token,
+        logout,
+        { method: 'DELETE' }
       );
 
       if (!response.ok) {

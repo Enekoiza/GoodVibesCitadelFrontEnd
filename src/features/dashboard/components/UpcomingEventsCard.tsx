@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card } from '../../../components/common/Card';
 import { ErrorMessage } from '../../../components/common/ErrorMessage';
@@ -42,7 +42,7 @@ const buildMonthDays = (month: Date) => {
 
 export const UpcomingEventsCard: React.FC = () => {
   const navigate = useNavigate();
-  const { token, roles } = useAuth();
+  const { token, roles, logout } = useAuth();
   const canViewEventsPage = hasRegisteredRoles(roles);
   const [events, setEvents] = useState<EventItem[]>([]);
   const [openedDay, setOpenedDay] = useState<string | null>(null);
@@ -52,22 +52,22 @@ export const UpcomingEventsCard: React.FC = () => {
   const currentMonth = useMemo(() => new Date(), []);
   const days = useMemo(() => buildMonthDays(currentMonth), [currentMonth]);
 
-  const fetchEvents = async () => {
+  const fetchEvents = useCallback(async () => {
     setIsLoading(true);
     setError(null);
 
     try {
-      setEvents(await fetchAllEvents(token));
+      setEvents(await fetchAllEvents(token, logout));
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Error desconocido al cargar los eventos.');
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [logout, token]);
 
   useEffect(() => {
     fetchEvents();
-  }, [token]);
+  }, [fetchEvents]);
 
   const eventsByDay = useMemo(() => {
     return events.reduce<Record<string, EventItem[]>>((acc, event) => {

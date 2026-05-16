@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { apiUrl } from '../../../config/api';
+import { authenticatedFetch } from '../../auth/api/authFetch';
 import { useAuth } from '../../auth/context/AuthContext';
 
 interface CreateRoleModalProps {
@@ -8,7 +8,7 @@ interface CreateRoleModalProps {
 }
 
 export const CreateRoleModal: React.FC<CreateRoleModalProps> = ({ onClose, onCreated }) => {
-  const { token } = useAuth();
+  const { token, logout } = useAuth();
   const [roleName, setRoleName] = useState('');
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -25,14 +25,11 @@ export const CreateRoleModal: React.FC<CreateRoleModalProps> = ({ onClose, onCre
     setIsSaving(true);
     setError(null);
     try {
-      const response = await fetch(
-        apiUrl(`/api/roles/create/${encodeURIComponent(roleName.trim())}`),
-        {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${token}`,
-          },
-        }
+      const response = await authenticatedFetch(
+        `/api/roles/create/${encodeURIComponent(roleName.trim())}`,
+        token,
+        logout,
+        { method: 'POST' }
       );
 
       if (!response.ok) {

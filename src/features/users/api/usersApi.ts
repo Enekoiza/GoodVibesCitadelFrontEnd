@@ -1,4 +1,4 @@
-import { apiUrl } from '../../../config/api';
+import { authenticatedFetch } from '../../auth/api/authFetch';
 
 export interface UserCharacterRow {
   name: string;
@@ -12,12 +12,9 @@ export interface AppUser {
   characters: UserCharacterRow[];
 }
 
-export async function fetchAllUsers(token: string | null): Promise<AppUser[]> {
-  if (!token) throw new Error('No hay sesión activa para cargar los miembros.');
-
-  const response = await fetch(apiUrl('/api/users/getAll'), {
+export async function fetchAllUsers(token: string | null, logout: () => void): Promise<AppUser[]> {
+  const response = await authenticatedFetch('/api/users/getAll', token, logout, {
     headers: {
-      Authorization: `Bearer ${token}`,
       'Content-Type': 'application/json',
     },
   });

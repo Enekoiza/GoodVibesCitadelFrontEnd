@@ -1,11 +1,11 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { apiUrl } from '../../../config/api';
 import { useAuth } from '../../../features/auth/context/AuthContext';
+import { authenticatedFetch } from '../../../features/auth/api/authFetch';
 import { CreateRoleModal } from '../components/CreateRoleModal';
 import { ConfirmDeleteModal } from '../components/ConfirmDeleteModal';
 
 export const RolesManagementPage: React.FC = () => {
-  const { token } = useAuth();
+  const { token, logout } = useAuth();
   const [roles, setRoles] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -16,12 +16,11 @@ export const RolesManagementPage: React.FC = () => {
   const deleteRole = async (roleName: string) => {
     setIsDeleting(true);
     try {
-      const response = await fetch(
-        apiUrl(`/api/roles/delete/${encodeURIComponent(roleName)}`),
-        {
-          method: 'DELETE',
-          headers: { 'Authorization': `Bearer ${token}` },
-        }
+      const response = await authenticatedFetch(
+        `/api/roles/delete/${encodeURIComponent(roleName)}`,
+        token,
+        logout,
+        { method: 'DELETE' }
       );
       if (!response.ok) throw new Error();
       setRoleToDelete(null);
@@ -37,9 +36,7 @@ export const RolesManagementPage: React.FC = () => {
     setIsLoading(true);
     setError(null);
     try {
-      const response = await fetch(apiUrl('/api/roles/getAll'), {
-        headers: { 'Authorization': `Bearer ${token}` },
-      });
+      const response = await authenticatedFetch('/api/roles/getAll', token, logout);
       if (!response.ok) throw new Error(`Error ${response.status}: No se pudieron cargar los roles.`);
       const data: string[] = await response.json();
       setRoles(data);
@@ -48,7 +45,7 @@ export const RolesManagementPage: React.FC = () => {
     } finally {
       setIsLoading(false);
     }
-  }, [token]);
+  }, [logout, token]);
 
   useEffect(() => {
     fetchRoles();

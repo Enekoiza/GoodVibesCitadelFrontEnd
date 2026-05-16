@@ -1,4 +1,4 @@
-import { apiUrl } from '../../../config/api';
+import { authenticatedFetch } from '../../auth/api/authFetch';
 
 export interface EventItem {
   username: string;
@@ -35,12 +35,9 @@ const parseEventsResponse = async (response: Response): Promise<EventItem[]> => 
   return [];
 };
 
-export const fetchAllEvents = async (token: string | null): Promise<EventItem[]> => {
-  if (!token) throw new Error('No hay sesión activa para cargar eventos.');
-
-  const response = await fetch(apiUrl('/api/event/getAll'), {
+export const fetchAllEvents = async (token: string | null, logout: () => void): Promise<EventItem[]> => {
+  const response = await authenticatedFetch('/api/event/getAll', token, logout, {
     headers: {
-      'Authorization': `Bearer ${token}`,
       'Content-Type': 'application/json',
     },
   });

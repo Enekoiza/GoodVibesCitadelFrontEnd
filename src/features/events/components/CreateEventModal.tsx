@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { apiUrl } from '../../../config/api';
+import { authenticatedFetch } from '../../auth/api/authFetch';
 import { useAuth } from '../../auth/context/AuthContext';
 import { EVENT_TYPES } from '../api/eventsApi';
 
@@ -28,7 +28,7 @@ interface CreateEventModalProps {
 }
 
 export const CreateEventModal: React.FC<CreateEventModalProps> = ({ onClose, onCreated }) => {
-  const { token, username } = useAuth();
+  const { token, username, logout } = useAuth();
   const [eventName, setEventName] = useState('');
   const [eventTime, setEventTime] = useState('');
   const [eventType, setEventType] = useState<string>(EVENT_TYPES[0]);
@@ -56,10 +56,9 @@ export const CreateEventModal: React.FC<CreateEventModalProps> = ({ onClose, onC
     setDateError(null);
 
     try {
-      const response = await fetch(apiUrl('/api/event/create'), {
+      const response = await authenticatedFetch('/api/event/create', token, logout, {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { apiUrl } from '../../../config/api';
+import { authenticatedFetch } from '../../auth/api/authFetch';
 import { useAuth } from '../../auth/context/AuthContext';
 
 interface RegisterUserModalProps {
@@ -8,7 +8,7 @@ interface RegisterUserModalProps {
 }
 
 export const RegisterUserModal: React.FC<RegisterUserModalProps> = ({ onClose, onRegistered }) => {
-  const { token } = useAuth();
+  const { token, logout } = useAuth();
   const [username, setUsername] = useState('');
   const [generatedPassword, setGeneratedPassword] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
@@ -38,10 +38,9 @@ export const RegisterUserModal: React.FC<RegisterUserModalProps> = ({ onClose, o
     setCopied(false);
 
     try {
-      const response = await fetch(apiUrl('/api/auth/register'), {
+      const response = await authenticatedFetch('/api/auth/register', token, logout, {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({ username: trimmedUsername }),

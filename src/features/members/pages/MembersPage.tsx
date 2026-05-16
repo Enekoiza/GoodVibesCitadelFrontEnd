@@ -14,7 +14,7 @@ const membersIcon = (
 );
 
 export const MembersPage: React.FC = () => {
-  const { token } = useAuth();
+  const { token, logout } = useAuth();
   const [members, setMembers] = useState<AppUser[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -23,14 +23,14 @@ export const MembersPage: React.FC = () => {
     setIsLoading(true);
     setError(null);
     try {
-      const data = await fetchAllUsers(token);
+      const data = await fetchAllUsers(token, logout);
       setMembers(data);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Error desconocido al cargar los miembros.');
     } finally {
       setIsLoading(false);
     }
-  }, [token]);
+  }, [logout, token]);
 
   useEffect(() => {
     void loadMembers();

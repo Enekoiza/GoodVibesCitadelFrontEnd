@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { apiUrl } from '../../../config/api';
+import { authenticatedFetch } from '../../auth/api/authFetch';
 import { useAuth } from '../../auth/context/AuthContext';
 import type { UserCharacterRow } from '../../users/api/usersApi';
 
@@ -52,7 +52,7 @@ export const UserRolesModal: React.FC<UserRolesModalProps> = ({
   onClose,
   onSaved,
 }) => {
-  const { token } = useAuth();
+  const { token, logout } = useAuth();
   const [allRoles, setAllRoles] = useState<string[]>([]);
   const [selectedRoles, setSelectedRoles] = useState<Set<string>>(new Set(currentRoles));
   const [isLoadingRoles, setIsLoadingRoles] = useState(true);
@@ -69,9 +69,7 @@ export const UserRolesModal: React.FC<UserRolesModalProps> = ({
     setIsLoadingRoles(true);
     setRolesError(null);
     try {
-      const response = await fetch(apiUrl('/api/roles/getAll'), {
-        headers: { 'Authorization': `Bearer ${token}` },
-      });
+      const response = await authenticatedFetch('/api/roles/getAll', token, logout);
       if (!response.ok) throw new Error(`Error ${response.status}`);
       const data: string[] = await response.json();
       setAllRoles(data);
@@ -80,7 +78,7 @@ export const UserRolesModal: React.FC<UserRolesModalProps> = ({
     } finally {
       setIsLoadingRoles(false);
     }
-  }, [token]);
+  }, [logout, token]);
 
   useEffect(() => {
     fetchRoles();
@@ -111,12 +109,13 @@ export const UserRolesModal: React.FC<UserRolesModalProps> = ({
         : [];
       const updatedCharacters = [...editableCharacters, ...newCharacter];
 
-      const rolesResponse = await fetch(
-        apiUrl(`/api/users/${encodeURIComponent(username)}/roles/assignMultiple`),
+      const rolesResponse = await authenticatedFetch(
+        `/api/users/${encodeURIComponent(username)}/roles/assignMultiple`,
+        token,
+        logout,
         {
           method: 'POST',
           headers: {
-            'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
@@ -127,12 +126,13 @@ export const UserRolesModal: React.FC<UserRolesModalProps> = ({
       );
       if (!rolesResponse.ok) throw new Error(`Error ${rolesResponse.status}`);
 
-      const charactersResponse = await fetch(
-        apiUrl(`/api/users/${encodeURIComponent(username)}/character/updateCharacterList`),
+      const charactersResponse = await authenticatedFetch(
+        `/api/users/${encodeURIComponent(username)}/character/updateCharacterList`,
+        token,
+        logout,
         {
           method: 'POST',
           headers: {
-            'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({

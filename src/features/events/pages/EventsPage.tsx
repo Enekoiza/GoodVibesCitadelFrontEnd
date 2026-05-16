@@ -80,7 +80,7 @@ const EventsTable = memo(function EventsTable({ events }: { events: EventItem[] 
 });
 
 export const EventsPage: React.FC = () => {
-  const { token } = useAuth();
+  const { token, logout } = useAuth();
   const [events, setEvents] = useState<EventItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -91,18 +91,18 @@ export const EventsPage: React.FC = () => {
     setIsLoading(true);
     setError(null);
     try {
-      setEvents(await fetchAllEvents(token));
+      setEvents(await fetchAllEvents(token, logout));
     } catch (err: unknown) {
       setError(getEventsErrorMessage(err));
     } finally {
       setIsLoading(false);
     }
-  }, [token]);
+  }, [logout, token]);
 
   useEffect(() => {
     let isCurrent = true;
 
-    void fetchAllEvents(token)
+    void fetchAllEvents(token, logout)
       .then((nextEvents) => {
         if (!isCurrent) return;
         setEvents(nextEvents);
@@ -120,7 +120,7 @@ export const EventsPage: React.FC = () => {
     return () => {
       isCurrent = false;
     };
-  }, [token]);
+  }, [logout, token]);
 
   const filteredEvents = useMemo(() => {
     if (!typeFilter) return events;
