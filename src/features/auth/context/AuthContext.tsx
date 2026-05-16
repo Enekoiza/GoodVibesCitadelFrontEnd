@@ -1,8 +1,9 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import type { ReactNode } from 'react';
 import { jwtDecode } from 'jwt-decode';
 import { apiUrl } from '../../../config/api';
 import { WAITING_ROLE } from '../../../constants';
+import { isJwtExpired } from '../utils/token';
 
 interface AuthContextType {
   isAuthenticated: boolean;
@@ -19,6 +20,49 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+const collectRolesFromDecoded = (decoded: Record<string, unknown>): string[] => {
+  const fromValue = (value: unknown): string[] => {
+    if (value == null) return [];
+    if (Array.isArray(value)) {
+      return value
+        .filter((v): v is string => typeof v === 'string')
+        .map((v) => v.trim())
+        .filter(Boolean);
+    }
+    if (typeof value === 'string' && value.trim()) return [value.trim()];
+    return [];
+  };
+
+  const roleClaimKey = 'http://schemas.microsoft.com/ws/2008/06/identity/claims/role';
+  const merged = [
+    ...fromValue(decoded[roleClaimKey]),
+    ...fromValue(decoded.role),
+    ...fromValue(decoded.Role),
+  ];
+  return [...new Set(merged)];
+};
+
+// Helper to extract roles and username from .NET JWT (no default admin role)
+const extractClaimsFromToken = (accessToken: string, fallbackUsername: string) => {
+  try {
+    const decoded = jwtDecode(accessToken) as Record<string, unknown>;
+    const rolesFromToken = collectRolesFromDecoded(decoded);
+    const name =
+      (decoded['http://schemas.xmlsoap.org/ws/2005/05/identity/claims/name'] as string | undefined) ||
+      (decoded.unique_name as string | undefined) ||
+      (decoded.name as string | undefined) ||
+      (decoded.Name as string | undefined) ||
+      fallbackUsername;
+
+    const displayRole = rolesFromToken.length === 0 ? WAITING_ROLE : rolesFromToken.join(', ');
+
+    return { roles: rolesFromToken, role: displayRole, name };
+  } catch (e) {
+    console.error('Failed to decode token', e);
+    return { roles: [] as string[], role: WAITING_ROLE, name: fallbackUsername };
+  }
+};
+
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
   const [token, setToken] = useState<string | null>(null);
@@ -27,53 +71,25 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [roles, setRolesState] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
 
-  const collectRolesFromDecoded = (decoded: Record<string, unknown>): string[] => {
-    const fromValue = (value: unknown): string[] => {
-      if (value == null) return [];
-      if (Array.isArray(value)) {
-        return value
-          .filter((v): v is string => typeof v === 'string')
-          .map((v) => v.trim())
-          .filter(Boolean);
-      }
-      if (typeof value === 'string' && value.trim()) return [value.trim()];
-      return [];
-    };
-
-    const roleClaimKey = 'http://schemas.microsoft.com/ws/2008/06/identity/claims/role';
-    const merged = [
-      ...fromValue(decoded[roleClaimKey]),
-      ...fromValue(decoded.role),
-      ...fromValue(decoded.Role),
-    ];
-    return [...new Set(merged)];
-  };
-
-  // Helper to extract roles and username from .NET JWT (no default admin role)
-  const extractClaimsFromToken = (accessToken: string, fallbackUsername: string) => {
-    try {
-      const decoded = jwtDecode(accessToken) as Record<string, unknown>;
-      const rolesFromToken = collectRolesFromDecoded(decoded);
-      const name =
-        (decoded['http://schemas.xmlsoap.org/ws/2005/05/identity/claims/name'] as string | undefined) ||
-        (decoded.unique_name as string | undefined) ||
-        (decoded.name as string | undefined) ||
-        (decoded.Name as string | undefined) ||
-        fallbackUsername;
-
-      const displayRole = rolesFromToken.length === 0 ? WAITING_ROLE : rolesFromToken.join(', ');
-
-      return { roles: rolesFromToken, role: displayRole, name };
-    } catch (e) {
-      console.error('Failed to decode token', e);
-      return { roles: [] as string[], role: WAITING_ROLE, name: fallbackUsername };
-    }
-  };
+  const logout = useCallback(() => {
+    localStorage.removeItem('accessToken');
+    setToken(null);
+    setUsernameState(null);
+    setRolesState([]);
+    setRoleState(null);
+    setIsAuthenticated(false);
+  }, []);
 
   useEffect(() => {
     // Check if user is already logged in on mount
     const storedToken = localStorage.getItem('accessToken');
     if (storedToken) {
+      if (isJwtExpired(storedToken)) {
+        logout();
+        setIsLoading(false);
+        return;
+      }
+
       // Pass empty string as fallback since user doesn't re-type name on mount
       const { roles: extractedRoles, role: extractedRole, name: extractedUsername } = extractClaimsFromToken(
         storedToken,
@@ -86,7 +102,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       setIsAuthenticated(true);
     }
     setIsLoading(false);
-  }, []);
+  }, [logout]);
 
   const login = async (username: string, password: string) => {
     try {
@@ -108,6 +124,11 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       const { accessToken } = data;
       
       if (accessToken) {
+        if (isJwtExpired(accessToken)) {
+          logout();
+          throw new Error('El token recibido ha caducado. Vuelve a iniciar sesión.');
+        }
+
         const { roles: extractedRoles, role: extractedRole, name: extractedUsername } = extractClaimsFromToken(
           accessToken,
           username
@@ -126,15 +147,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     } catch (error) {
       throw error;
     }
-  };
-
-  const logout = () => {
-    localStorage.removeItem('accessToken');
-    setToken(null);
-    setUsernameState(null);
-    setRolesState([]);
-    setRoleState(null);
-    setIsAuthenticated(false);
   };
 
   return (
