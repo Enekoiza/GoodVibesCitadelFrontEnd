@@ -1,6 +1,7 @@
 import React, { memo, useState, useEffect, useCallback, useMemo } from 'react';
 import { useAuth } from '../../auth/context/AuthContext';
-import { EVENT_TYPES, fetchAllEvents, getEventTypeBadge } from '../api/eventsApi';
+import { PARTY_TYPES } from '../../party-builder/api/partyBuilderApi';
+import { fetchAllEvents, getEventTypeBadge } from '../api/eventsApi';
 import type { EventItem } from '../api/eventsApi';
 import { CreateEventModal } from '../components/CreateEventModal';
 
@@ -164,7 +165,7 @@ export const EventsPage: React.FC = () => {
                 className="max-w-[13rem] cursor-pointer rounded-lg border border-slate-700 bg-slate-950/80 py-2 pl-3 pr-8 text-xs font-medium text-slate-200 shadow-sm focus:border-cyan-500/50 focus:outline-none focus:ring-2 focus:ring-cyan-500/20"
               >
                 <option value="">Todos los tipos</option>
-                {EVENT_TYPES.map((type) => (
+                {PARTY_TYPES.map((type) => (
                   <option key={type} value={type}>
                     {type}
                   </option>

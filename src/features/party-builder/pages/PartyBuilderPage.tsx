@@ -8,6 +8,15 @@ import {
   type PartyType,
 } from '../api/partyBuilderApi';
 import { fetchAllUsers, type AppUser, type UserCharacterRow } from '../../users/api/usersApi';
+import { attachPartyToEvent, fetchAllEvents, type AttachPartyRequest, type EventItem } from '../../events/api/eventsApi';
+
+const eventDateFormatter = new Intl.DateTimeFormat('es-ES', {
+  day: '2-digit',
+  month: '2-digit',
+  year: 'numeric',
+  hour: '2-digit',
+  minute: '2-digit',
+});
 
 const partyBuilderIcon = (
   <svg className="h-5 w-5 text-cyan-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -46,6 +55,17 @@ const getCompositionRoleTags = (composition: CompositionDto) =>
 
 const getErrorMessage = (err: unknown) =>
   err instanceof Error ? err.message : 'Error desconocido.';
+
+const formatEventDateTime = (iso: string) => {
+  try {
+    return eventDateFormatter.format(new Date(iso));
+  } catch {
+    return iso;
+  }
+};
+
+const getEventKey = (event: EventItem) =>
+  `${event.eventName}-${event.eventTime}-${event.username}`;
 
 const getCharacterName = (character: UserCharacterRow) => character.name ?? character.Name ?? '';
 
@@ -117,7 +137,7 @@ const buildSlotsFromComposition = (composition: CompositionDto): PartySlot[] =>
   );
 
 export const PartyBuilderPage: React.FC = () => {
-  const { token, logout } = useAuth();
+  const { token, logout, username } = useAuth();
 
   const [compositions, setCompositions] = useState<CompositionDto[]>([]);
   const [isLoadingComps, setIsLoadingComps] = useState(true);
@@ -125,6 +145,13 @@ export const PartyBuilderPage: React.FC = () => {
 
   const [users, setUsers] = useState<AppUser[]>([]);
   const [isLoadingUsers, setIsLoadingUsers] = useState(true);
+  const [events, setEvents] = useState<EventItem[]>([]);
+  const [isLoadingEvents, setIsLoadingEvents] = useState(true);
+  const [eventsError, setEventsError] = useState<string | null>(null);
+  const [selectedEventKey, setSelectedEventKey] = useState('');
+  const [isSavingAssignment, setIsSavingAssignment] = useState(false);
+  const [saveAssignmentError, setSaveAssignmentError] = useState<string | null>(null);
+  const [saveAssignmentMessage, setSaveAssignmentMessage] = useState<string | null>(null);
 
   const [selectedComposition, setSelectedComposition] = useState<CompositionDto | null>(null);
   const [assignmentName, setAssignmentName] = useState<string | null>(null);
@@ -160,8 +187,37 @@ export const PartyBuilderPage: React.FC = () => {
       .finally(() => setIsLoadingUsers(false));
   }, [logout, token]);
 
+  useEffect(() => {
+    let isCurrent = true;
+
+    setIsLoadingEvents(true);
+    setEventsError(null);
+    fetchAllEvents(token, logout)
+      .then((nextEvents) => {
+        if (!isCurrent) return;
+        setEvents(nextEvents);
+      })
+      .catch((err: unknown) => {
+        if (!isCurrent) return;
+        setEventsError(getErrorMessage(err));
+      })
+      .finally(() => {
+        if (!isCurrent) return;
+        setIsLoadingEvents(false);
+      });
+
+    return () => {
+      isCurrent = false;
+    };
+  }, [logout, token]);
+
   const allCharacters = useMemo(
     () => users.flatMap((u) => (u.characters ?? []).filter(Boolean)),
+    [users]
+  );
+
+  const userNameById = useMemo(
+    () => new Map(users.map((user) => [user.id, user.userName])),
     [users]
   );
 
@@ -180,12 +236,18 @@ export const PartyBuilderPage: React.FC = () => {
       setAssignmentName(null);
       setSlots([]);
       setOpenCharacterSelectIndex(null);
+      setSelectedEventKey('');
+      setSaveAssignmentError(null);
+      setSaveAssignmentMessage(null);
       return;
     }
     setSelectedComposition(composition);
     setAssignmentName(composition.name);
     setSlots(buildSlotsFromComposition(composition));
     setOpenCharacterSelectIndex(null);
+    setSelectedEventKey('');
+    setSaveAssignmentError(null);
+    setSaveAssignmentMessage(null);
   };
 
   const updateSlot = (index: number, field: keyof Pick<PartySlot, 'userId' | 'characterName'>, value: string) => {
@@ -247,6 +309,9 @@ export const PartyBuilderPage: React.FC = () => {
       setAssignmentName('Nueva asignación');
       setSlots(buildSlotsFromRoleCounts(newAssignmentCounts));
       setOpenCharacterSelectIndex(null);
+      setSelectedEventKey('');
+      setSaveAssignmentError(null);
+      setSaveAssignmentMessage(null);
       setIsNewAssignmentModalOpen(false);
     } catch (err: unknown) {
       setNewAssignmentError(getErrorMessage(err));
@@ -260,22 +325,78 @@ export const PartyBuilderPage: React.FC = () => {
     0
   );
 
+  const previewRows = useMemo(
+    () =>
+      slots.map((slot) => ({
+        ...slot,
+        userName: userNameById.get(slot.userId) ?? '',
+      })),
+    [slots, userNameById]
+  );
+
+  const shouldShowPreview =
+    assignmentName !== null &&
+    previewRows.length > 0 &&
+    previewRows.every((slot) => slot.userId !== '' && slot.characterName !== '');
+
+  const selectedEvent = useMemo(
+    () => events.find((event) => getEventKey(event) === selectedEventKey) ?? null,
+    [events, selectedEventKey]
+  );
+
+  const buildAttachPartyPayload = (): AttachPartyRequest | null => {
+    if (!assignmentName || !selectedEvent || !username) return null;
+
+    return {
+      Event: selectedEvent,
+      AssignedByUsername: username,
+      Slots: previewRows.map((slot) => ({
+        Role: slot.role,
+        Username: slot.userName,
+        CharacterName: slot.characterName,
+      })),
+    };
+  };
+
+  const saveAssignment = async () => {
+    const payload = buildAttachPartyPayload();
+
+    if (!payload) {
+      setSaveAssignmentMessage(null);
+      setSaveAssignmentError('Selecciona un evento antes de guardar.');
+      return;
+    }
+
+    setIsSavingAssignment(true);
+    setSaveAssignmentError(null);
+    setSaveAssignmentMessage(null);
+
+    try {
+      await attachPartyToEvent(token, logout, payload);
+      setSaveAssignmentMessage('Party asignada al evento correctamente.');
+    } catch (err: unknown) {
+      setSaveAssignmentError(getErrorMessage(err));
+    } finally {
+      setIsSavingAssignment(false);
+    }
+  };
+
   return (
-    <div className="space-y-6">
+    <div className="flex flex-col gap-6">
       <header className="mb-8">
         <h2 className="mb-2 text-2xl font-bold text-white">Constructor de party</h2>
         <p className="text-slate-400">Organiza y prepara composiciones para la Constant Party.</p>
       </header>
 
       {/* Compositions table */}
-      <div className="rounded-2xl border border-slate-800 bg-slate-900/50 shadow-xl">
+      <div className="order-2 rounded-2xl border border-slate-800 bg-slate-900/50 shadow-xl">
         <div className="flex items-center justify-between gap-4 border-b border-slate-800 px-6 py-4">
           <div className="flex min-w-0 flex-1 items-center gap-3">
             <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-cyan-500/10">
               {partyBuilderIcon}
             </div>
             <div className="min-w-0">
-              <h3 className="text-sm font-semibold text-slate-100">Composiciones</h3>
+              <h3 className="text-sm font-semibold text-slate-100">Maqueta de Composiciones</h3>
               {!isLoadingComps && !compsError ? (
                 <p className="text-xs text-slate-500">
                   {compositions.length} composición{compositions.length !== 1 ? 'es' : ''}
@@ -388,7 +509,7 @@ export const PartyBuilderPage: React.FC = () => {
       </div>
 
       {/* Party assignment card — always visible */}
-      <div className="rounded-2xl border border-cyan-500/20 bg-slate-900/50 shadow-xl">
+      <div className="order-1 rounded-2xl border border-cyan-500/20 bg-slate-900/50 shadow-xl">
         <div className="flex items-center justify-between gap-4 border-b border-slate-800 px-6 py-4">
           <div className="min-w-0">
             <h3 className="text-sm font-semibold text-slate-100">
@@ -424,110 +545,211 @@ export const PartyBuilderPage: React.FC = () => {
               <p className="text-sm text-slate-500">Cargando usuarios...</p>
             </div>
           ) : (
-            <div className="space-y-3">
-              {/* Column headers */}
-              <div className="grid grid-cols-[10rem_1fr_1fr] gap-4 px-1">
-                <p className="text-xs font-medium uppercase tracking-wider text-slate-500">Rol</p>
-                <p className="text-xs font-medium uppercase tracking-wider text-slate-500">Usuario</p>
-                <p className="text-xs font-medium uppercase tracking-wider text-slate-500">Personaje</p>
+            <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_22rem]">
+              <div className="space-y-3">
+                {/* Column headers */}
+                <div className="grid grid-cols-[10rem_1fr_1fr] gap-4 px-1">
+                  <p className="text-xs font-medium uppercase tracking-wider text-slate-500">Rol</p>
+                  <p className="text-xs font-medium uppercase tracking-wider text-slate-500">Usuario</p>
+                  <p className="text-xs font-medium uppercase tracking-wider text-slate-500">Personaje</p>
+                </div>
+
+                {slots.map((slot, index) => {
+                  const roleCharacters = allCharacters.filter((c) => isCharacterForRole(c, slot.role));
+
+                  return (
+                    <div key={index} className="grid grid-cols-[10rem_1fr_1fr] items-center gap-4">
+                      {/* Role badge */}
+                      <span
+                        className={`inline-flex w-fit items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold ${slot.roleClassName}`}
+                      >
+                        {slot.role}
+                      </span>
+
+                      {/* User */}
+                      <select
+                        value={slot.userId}
+                        onChange={(e) => updateSlot(index, 'userId', e.target.value)}
+                        className={selectClassName}
+                      >
+                        <option value="">Selecciona un usuario</option>
+                        {users.map((u) => (
+                          <option key={u.id} value={u.id}>
+                            {u.userName}
+                          </option>
+                        ))}
+                      </select>
+
+                      {/* Character */}
+                      <div className="relative">
+                        <button
+                          type="button"
+                          onClick={() => setOpenCharacterSelectIndex((current) => (current === index ? null : index))}
+                          disabled={roleCharacters.length === 0}
+                          className="flex w-full cursor-pointer items-center justify-between gap-3 rounded-lg border border-slate-700 bg-slate-950/80 py-2 pl-3 pr-3 text-left text-xs font-medium text-slate-200 shadow-sm transition-colors hover:bg-slate-900 focus:border-cyan-500/50 focus:outline-none focus:ring-2 focus:ring-cyan-500/20 disabled:cursor-not-allowed disabled:opacity-50"
+                        >
+                          {slot.characterName ? (
+                            (() => {
+                              const selectedCharacter = roleCharacters.find((c) => getCharacterName(c) === slot.characterName);
+                              const selectedClassName = selectedCharacter ? getCharacterClassName(selectedCharacter) : '';
+
+                              return (
+                                <span className="flex min-w-0 items-center gap-2">
+                                  <ClassPhoto classNameValue={selectedClassName} alt={slot.characterName} />
+                                  <span className="truncate">
+                                    {slot.characterName}
+                                    {selectedClassName ? ` (${selectedClassName})` : ''}
+                                  </span>
+                                </span>
+                              );
+                            })()
+                          ) : (
+                            <span className="text-slate-400">Selecciona un personaje</span>
+                          )}
+                          <svg className="h-4 w-4 shrink-0 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden>
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                          </svg>
+                        </button>
+
+                        {openCharacterSelectIndex === index ? (
+                          <div className="absolute left-0 right-0 top-full z-20 mt-1 max-h-60 overflow-y-auto rounded-lg border border-slate-700 bg-slate-950 p-1 shadow-xl">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                updateSlot(index, 'characterName', '');
+                                setOpenCharacterSelectIndex(null);
+                              }}
+                              className="flex w-full items-center rounded-md px-3 py-2 text-left text-xs font-medium text-slate-400 transition-colors hover:bg-slate-800 hover:text-slate-200"
+                            >
+                              Selecciona un personaje
+                            </button>
+                            {roleCharacters.map((c, ci) => {
+                              const characterName = getCharacterName(c);
+                              const characterClassName = getCharacterClassName(c);
+
+                              return (
+                                <button
+                                  key={`${characterName}-${ci}`}
+                                  type="button"
+                                  onClick={() => {
+                                    updateSlot(index, 'characterName', characterName);
+                                    setOpenCharacterSelectIndex(null);
+                                  }}
+                                  className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-xs font-medium text-slate-200 transition-colors hover:bg-cyan-500/10 hover:text-cyan-300"
+                                >
+                                  <ClassPhoto classNameValue={characterClassName} alt={characterName} />
+                                  <span className="min-w-0 truncate">
+                                    {characterName} ({characterClassName})
+                                  </span>
+                                </button>
+                              );
+                            })}
+                          </div>
+                        ) : null}
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
 
-              {slots.map((slot, index) => {
-                const roleCharacters = allCharacters.filter((c) => isCharacterForRole(c, slot.role));
+              {shouldShowPreview ? (
+                <aside className="rounded-2xl border border-cyan-500/20 bg-cyan-500/[0.06] p-4 shadow-lg shadow-cyan-950/20">
+                  <div className="mb-4">
+                    <h4 className="text-xl font-bold tracking-tight text-cyan-100">Preview</h4>
+                  </div>
 
-                return (
-                  <div key={index} className="grid grid-cols-[10rem_1fr_1fr] items-center gap-4">
-                    {/* Role badge */}
-                    <span
-                      className={`inline-flex w-fit items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold ${slot.roleClassName}`}
-                    >
-                      {slot.role}
+                  <div className="overflow-hidden rounded-xl border border-slate-700/70 bg-slate-950/60">
+                    <table className="w-full text-xs">
+                      <caption className="sr-only">Preview de asignación</caption>
+                      <thead className="bg-slate-900/80 text-slate-500">
+                        <tr>
+                          <th scope="col" className="px-3 py-2 text-left font-medium uppercase tracking-wider">
+                            Rol
+                          </th>
+                          <th scope="col" className="px-3 py-2 text-left font-medium uppercase tracking-wider">
+                            Usuario
+                          </th>
+                          <th scope="col" className="px-3 py-2 text-left font-medium uppercase tracking-wider">
+                            Personaje
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-800/80">
+                        {previewRows.map((slot, index) => (
+                          <tr key={`${slot.role}-${slot.userId}-${slot.characterName}-${index}`}>
+                            <td className="px-3 py-2">
+                              <span
+                                className={`inline-flex w-fit items-center rounded-full border px-2 py-0.5 text-[11px] font-semibold ${slot.roleClassName}`}
+                              >
+                                {slot.role}
+                              </span>
+                            </td>
+                            <td className="px-3 py-2 font-medium text-slate-200">{slot.userName}</td>
+                            <td className="px-3 py-2 text-slate-300">{slot.characterName}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  <label className="mt-4 block">
+                    <span className="mb-2 block text-xs font-medium uppercase tracking-wider text-cyan-200/70">
+                      Evento
                     </span>
-
-                    {/* User */}
                     <select
-                      value={slot.userId}
-                      onChange={(e) => updateSlot(index, 'userId', e.target.value)}
+                      value={selectedEventKey}
+                      onChange={(e) => {
+                        setSelectedEventKey(e.target.value);
+                        setSaveAssignmentError(null);
+                        setSaveAssignmentMessage(null);
+                      }}
+                      disabled={isLoadingEvents || events.length === 0}
                       className={selectClassName}
                     >
-                      <option value="">Selecciona un usuario</option>
-                      {users.map((u) => (
-                        <option key={u.id} value={u.id}>
-                          {u.userName}
-                        </option>
-                      ))}
+                      <option value="">
+                        {isLoadingEvents
+                          ? 'Cargando eventos...'
+                          : events.length === 0
+                            ? 'No hay eventos disponibles'
+                            : 'Selecciona un evento'}
+                      </option>
+                      {events.map((event) => {
+                        const eventKey = getEventKey(event);
+
+                        return (
+                          <option key={eventKey} value={eventKey}>
+                            {event.eventName} · {event.eventType} · {formatEventDateTime(event.eventTime)}
+                          </option>
+                        );
+                      })}
                     </select>
+                    {eventsError !== null ? (
+                      <p className="mt-2 text-xs font-medium text-red-300">{eventsError}</p>
+                    ) : null}
+                  </label>
 
-                    {/* Character */}
-                    <div className="relative">
-                      <button
-                        type="button"
-                        onClick={() => setOpenCharacterSelectIndex((current) => (current === index ? null : index))}
-                        disabled={roleCharacters.length === 0}
-                        className="flex w-full cursor-pointer items-center justify-between gap-3 rounded-lg border border-slate-700 bg-slate-950/80 py-2 pl-3 pr-3 text-left text-xs font-medium text-slate-200 shadow-sm transition-colors hover:bg-slate-900 focus:border-cyan-500/50 focus:outline-none focus:ring-2 focus:ring-cyan-500/20 disabled:cursor-not-allowed disabled:opacity-50"
-                      >
-                        {slot.characterName ? (
-                          (() => {
-                            const selectedCharacter = roleCharacters.find((c) => getCharacterName(c) === slot.characterName);
-                            const selectedClassName = selectedCharacter ? getCharacterClassName(selectedCharacter) : '';
+                  {saveAssignmentError !== null ? (
+                    <p className="mt-3 rounded-lg border border-red-500/20 bg-red-500/10 px-3 py-2 text-xs font-medium text-red-300">
+                      {saveAssignmentError}
+                    </p>
+                  ) : null}
 
-                            return (
-                              <span className="flex min-w-0 items-center gap-2">
-                                <ClassPhoto classNameValue={selectedClassName} alt={slot.characterName} />
-                                <span className="truncate">
-                                  {slot.characterName}
-                                  {selectedClassName ? ` (${selectedClassName})` : ''}
-                                </span>
-                              </span>
-                            );
-                          })()
-                        ) : (
-                          <span className="text-slate-400">Selecciona un personaje</span>
-                        )}
-                        <svg className="h-4 w-4 shrink-0 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden>
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                        </svg>
-                      </button>
+                  {saveAssignmentMessage !== null ? (
+                    <p className="mt-3 rounded-lg border border-emerald-500/20 bg-emerald-500/10 px-3 py-2 text-xs font-medium text-emerald-300">
+                      {saveAssignmentMessage}
+                    </p>
+                  ) : null}
 
-                      {openCharacterSelectIndex === index ? (
-                        <div className="absolute left-0 right-0 top-full z-20 mt-1 max-h-60 overflow-y-auto rounded-lg border border-slate-700 bg-slate-950 p-1 shadow-xl">
-                          <button
-                            type="button"
-                            onClick={() => {
-                              updateSlot(index, 'characterName', '');
-                              setOpenCharacterSelectIndex(null);
-                            }}
-                            className="flex w-full items-center rounded-md px-3 py-2 text-left text-xs font-medium text-slate-400 transition-colors hover:bg-slate-800 hover:text-slate-200"
-                          >
-                            Selecciona un personaje
-                          </button>
-                          {roleCharacters.map((c, ci) => {
-                            const characterName = getCharacterName(c);
-                            const characterClassName = getCharacterClassName(c);
-
-                            return (
-                              <button
-                                key={`${characterName}-${ci}`}
-                                type="button"
-                                onClick={() => {
-                                  updateSlot(index, 'characterName', characterName);
-                                  setOpenCharacterSelectIndex(null);
-                                }}
-                                className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-xs font-medium text-slate-200 transition-colors hover:bg-cyan-500/10 hover:text-cyan-300"
-                              >
-                                <ClassPhoto classNameValue={characterClassName} alt={characterName} />
-                                <span className="min-w-0 truncate">
-                                  {characterName} ({characterClassName})
-                                </span>
-                              </button>
-                            );
-                          })}
-                        </div>
-                      ) : null}
-                    </div>
-                  </div>
-                );
-              })}
+                  <button
+                    type="button"
+                    onClick={() => void saveAssignment()}
+                    disabled={isSavingAssignment || selectedEvent === null}
+                    className="mt-4 w-full rounded-xl bg-cyan-400 px-4 py-2.5 text-sm font-semibold text-slate-950 shadow-lg shadow-cyan-950/30 transition-colors hover:bg-cyan-300 focus:outline-none focus:ring-2 focus:ring-cyan-300/50 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    {isSavingAssignment ? 'Guardando...' : 'Guardar'}
+                  </button>
+                </aside>
+              ) : null}
             </div>
           )}
         </div>
@@ -575,7 +797,7 @@ export const PartyBuilderPage: React.FC = () => {
                   }}
                   className={selectClassName}
                 >
-                  <option value="">— selecciona tipo —</option>
+                  <option value="">Selecciona el tipo de party</option>
                   {PARTY_TYPES.map((partyType) => (
                     <option key={partyType} value={partyType}>
                       {partyType}

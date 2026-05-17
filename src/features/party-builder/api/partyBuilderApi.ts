@@ -11,7 +11,7 @@ export interface CompositionDto {
   isPartyFull: boolean;
 }
 
-export const PARTY_TYPES = ['Farm', 'Pvp', 'Siege', 'Raid', 'Support'] as const;
+export const PARTY_TYPES = ['Farm', 'Pvp', 'Siege', 'Raid', 'EpicRaid', 'Support'] as const;
 
 export type PartyType = (typeof PARTY_TYPES)[number];
 

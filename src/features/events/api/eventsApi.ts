@@ -7,6 +7,18 @@ export interface EventItem {
   eventType: string;
 }
 
+export interface AttachPartySlot {
+  Role: string;
+  Username: string;
+  CharacterName: string;
+}
+
+export interface AttachPartyRequest {
+  Event: EventItem;
+  AssignedByUsername: string;
+  Slots: AttachPartySlot[];
+}
+
 /** Tipos de evento soportados al crear y filtrar. */
 export const EVENT_TYPES = [
   'Asedio',
@@ -44,4 +56,20 @@ export const fetchAllEvents = async (token: string | null, logout: () => void): 
 
   if (!response.ok) throw new Error(`Error ${response.status}: No se pudieron cargar los eventos.`);
   return parseEventsResponse(response);
+};
+
+export const attachPartyToEvent = async (
+  token: string | null,
+  logout: () => void,
+  payload: AttachPartyRequest
+): Promise<void> => {
+  const response = await authenticatedFetch('/api/event/attachParty', token, logout, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(payload),
+  });
+
+  if (!response.ok) throw new Error(`Error ${response.status}: No se pudo asignar la party al evento.`);
 };
