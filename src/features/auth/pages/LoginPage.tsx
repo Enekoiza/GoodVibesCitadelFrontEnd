@@ -4,6 +4,17 @@ import { apiUrl } from '../../../config/api';
 import { useAuth } from '../context/AuthContext';
 import logoUrl from '../../../assets/logo.png';
 
+const BACKEND_COMMUNICATION_ERROR_MESSAGE =
+  'Ha ocurrido un error. El administrador ha sido informado.';
+
+const getErrorMessage = (error: unknown, fallbackMessage: string) => {
+  if (error instanceof TypeError && error.message === 'Failed to fetch') {
+    return BACKEND_COMMUNICATION_ERROR_MESSAGE;
+  }
+
+  return error instanceof Error ? error.message : fallbackMessage;
+};
+
 interface PasswordInputProps {
   id: string;
   label: string;
@@ -100,8 +111,8 @@ const TemporaryPasswordModal: React.FC<TemporaryPasswordModalProps> = ({
       }
 
       onPasswordUpdated();
-    } catch (err: any) {
-      setError(err.message || 'No se pudo actualizar la contraseña.');
+    } catch (err: unknown) {
+      setError(getErrorMessage(err, 'No se pudo actualizar la contraseña.'));
     } finally {
       setIsSaving(false);
     }
@@ -200,8 +211,8 @@ export const LoginPage: React.FC = () => {
       }
 
       throw new Error(`Error ${temporaryPasswordResponse.status}: No se pudo verificar la contraseña temporal.`);
-    } catch (err: any) {
-      setError(err.message || 'Error al iniciar sesión');
+    } catch (err: unknown) {
+      setError(getErrorMessage(err, 'Error al iniciar sesión'));
     } finally {
       setIsSubmitting(false);
     }
