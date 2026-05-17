@@ -10,6 +10,7 @@ import { MembershipManagementPage } from './features/admin/pages/MembershipManag
 import { RolesManagementPage } from './features/admin/pages/RolesManagementPage';
 import { EventsPage } from './features/events/pages/EventsPage';
 import { MembersPage } from './features/members/pages/MembersPage';
+import { PartyBuilderPage } from './features/party-builder/pages/PartyBuilderPage';
 
 function App() {
   return (
@@ -23,6 +24,7 @@ function App() {
             <Route element={<RegisteredMemberRoute />}>
               <Route path="/eventos" element={<AppLayout><EventsPage /></AppLayout>} />
               <Route path="/miembros" element={<AppLayout><MembersPage /></AppLayout>} />
+              <Route path="/party-builder" element={<AppLayout><PartyBuilderPage /></AppLayout>} />
             </Route>
             <Route element={<AdminProtectedRoute />}>
               <Route

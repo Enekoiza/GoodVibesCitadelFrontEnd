@@ -1,8 +1,14 @@
 import { authenticatedFetch } from '../../auth/api/authFetch';
 
 export interface UserCharacterRow {
-  name: string;
-  className: string;
+  name?: string;
+  Name?: string;
+  className?: string;
+  ClassName?: string;
+  type?: string;
+  Type?: string;
+  classType?: string;
+  ClassType?: string;
 }
 
 export interface AppUser {

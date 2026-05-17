@@ -154,6 +154,29 @@ export const Sidebar: React.FC = () => {
                   </svg>
                   Miembros
                 </a>
+
+                <a
+                  href="#"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    navigate('/party-builder');
+                  }}
+                  className={`flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium transition-colors ${
+                    isActive('/party-builder')
+                      ? 'bg-cyan-500/10 text-cyan-400'
+                      : 'text-slate-400 hover:bg-slate-800 hover:text-slate-200'
+                  }`}
+                >
+                  <svg className="h-5 w-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M17 20h5v-2a4 4 0 00-4-4h-1M9 20H2v-2a4 4 0 014-4h3m5-10a4 4 0 110 8 4 4 0 010-8zM7 8a3 3 0 110 6 3 3 0 010-6zm10 0a3 3 0 110 6 3 3 0 010-6z"
+                    />
+                  </svg>
+                  Constructor de party
+                </a>
               </nav>
 
               {isAdmin ? (
