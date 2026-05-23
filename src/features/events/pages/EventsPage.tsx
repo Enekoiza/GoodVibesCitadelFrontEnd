@@ -12,6 +12,8 @@ import {
 } from '../api/eventsApi';
 import type { EventItem } from '../api/eventsApi';
 import { CreateEventModal } from '../components/CreateEventModal';
+import { EventDropsEditor } from '../components/EventDropsEditor';
+import { EventDropsTable } from '../components/EventDropsTable';
 
 const EVENT_DATE_FORMATTER = new Intl.DateTimeFormat('es-ES', {
   day: '2-digit',
@@ -167,6 +169,15 @@ export const EventsPage: React.FC = () => {
     return events.filter((e) => e.eventType === typeFilter);
   }, [events, typeFilter]);
 
+  const handleEventDropsSaved = useCallback((eventId: string, drops: EventItem['drops']) => {
+    setEvents((current) =>
+      current.map((event) => (event.eventId === eventId ? { ...event, drops } : event))
+    );
+    setSelectedEvent((current) =>
+      current?.eventId === eventId ? { ...current, drops } : current
+    );
+  }, []);
+
   return (
     <>
       <div className="space-y-6">
@@ -278,24 +289,18 @@ export const EventsPage: React.FC = () => {
 
       {selectedEvent ? (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-3 backdrop-blur-sm sm:p-4"
           onClick={(event) => {
             if (event.target === event.currentTarget) setSelectedEvent(null);
           }}
         >
-          <div className="w-full max-w-lg rounded-2xl border border-slate-700 bg-slate-900 shadow-2xl">
-            <div className="flex items-start justify-between gap-4 border-b border-slate-800 px-6 py-4">
+          <div className="flex max-h-[calc(100dvh-1.5rem)] w-full max-w-lg flex-col rounded-2xl border border-slate-700 bg-slate-900 shadow-2xl sm:max-h-[calc(100dvh-2rem)]">
+            <div className="flex items-start justify-between gap-4 border-b border-slate-800 px-4 py-4 sm:px-6">
               <div className="min-w-0">
-                <h3 className="text-base font-semibold text-slate-100">
-                  {hasPartyComposition(selectedEvent.partyCompositions)
-                    ? selectedEvent.eventName
-                    : 'Composición de party'}
-                </h3>
-                {hasPartyComposition(selectedEvent.partyCompositions) ? (
-                  <p className="mt-1 text-sm text-slate-500">
-                    {selectedEvent.eventType} · {formatDateTime(selectedEvent.eventTime)}
-                  </p>
-                ) : null}
+                <h3 className="text-base font-semibold text-slate-100">{selectedEvent.eventName}</h3>
+                <p className="mt-1 text-sm text-slate-500">
+                  {selectedEvent.eventType} · {formatDateTime(selectedEvent.eventTime)}
+                </p>
               </div>
               <button
                 type="button"
@@ -307,14 +312,29 @@ export const EventsPage: React.FC = () => {
               </button>
             </div>
 
-            <div className="p-6">
-              {hasPartyComposition(selectedEvent.partyCompositions) ? (
-                <PartyAssignmentPreviewTable rows={getEventPartyPreviewRows(selectedEvent)} />
-              ) : (
-                <p className="py-6 text-center text-sm text-slate-400">
-                  Este evento no tiene ninguna composicion asignada.
-                </p>
-              )}
+            <div className="min-h-0 space-y-6 overflow-y-auto p-4 sm:p-6">
+              <section className="space-y-3">
+                <h4 className="text-sm font-semibold text-slate-200">Composición de party</h4>
+                {hasPartyComposition(selectedEvent.partyCompositions) ? (
+                  <PartyAssignmentPreviewTable rows={getEventPartyPreviewRows(selectedEvent)} />
+                ) : (
+                  <p className="py-2 text-center text-sm text-slate-400">
+                    Este evento no tiene ninguna composicion asignada.
+                  </p>
+                )}
+              </section>
+
+              {selectedEvent.drops.length > 0 ? (
+                <EventDropsTable drops={selectedEvent.drops} />
+              ) : null}
+
+              <div className="border-t border-slate-800 pt-6">
+                <EventDropsEditor
+                  eventId={selectedEvent.eventId}
+                  initialDrops={selectedEvent.drops}
+                  onSaved={(drops) => handleEventDropsSaved(selectedEvent.eventId, drops)}
+                />
+              </div>
             </div>
           </div>
         </div>

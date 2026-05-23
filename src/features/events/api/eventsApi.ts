@@ -11,6 +11,11 @@ export interface PartyComposition {
   slots: PartyCompositionSlot[];
 }
 
+export interface EventDrop {
+  name: string;
+  quantity: number;
+}
+
 export interface EventItem {
   eventId: string;
   username: string;
@@ -18,6 +23,7 @@ export interface EventItem {
   eventName: string;
   eventType: string;
   partyCompositions: PartyComposition[];
+  drops: EventDrop[];
 }
 
 export interface AttachPartyEventPayload {
@@ -48,6 +54,64 @@ export interface AttachPartyRequest {
   Slots: AttachPartySlot[];
   ReplaceExisting: boolean;
 }
+
+export interface UpdateEventDropsRequest {
+  EventId: string;
+  Drops: { Name: string; Quantity: number }[];
+}
+
+export type ValidateDropsJsonResult =
+  | { ok: true; drops: EventDrop[] }
+  | { ok: false; error: string };
+
+export const validateDropsJson = (json: string): ValidateDropsJsonResult => {
+  const trimmed = json.trim();
+  if (!trimmed) {
+    return { ok: true, drops: [] };
+  }
+
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(trimmed);
+  } catch {
+    return { ok: false, error: 'El JSON no es válido.' };
+  }
+
+  if (!Array.isArray(parsed)) {
+    return { ok: false, error: 'El JSON debe ser un array de materiales.' };
+  }
+
+  const drops: EventDrop[] = [];
+
+  for (const [index, item] of parsed.entries()) {
+    if (item == null || typeof item !== 'object') {
+      return { ok: false, error: `El elemento ${index + 1} no es un objeto válido.` };
+    }
+
+    const record = item as Record<string, unknown>;
+    const name = record.name ?? record.Name ?? record.nombre ?? record.Nombre;
+    const quantity = record.quantity ?? record.Quantity ?? record.cantidad ?? record.Cantidad;
+
+    if (typeof name !== 'string' || !name.trim()) {
+      return { ok: false, error: `El elemento ${index + 1} necesita el campo "name".` };
+    }
+
+    if (typeof quantity !== 'number' || !Number.isFinite(quantity) || quantity <= 0) {
+      return { ok: false, error: `El elemento ${index + 1} necesita el campo "quantity" mayor que cero.` };
+    }
+
+    drops.push({ name: name.trim(), quantity });
+  }
+
+  return { ok: true, drops };
+};
+
+export const formatDropsJson = (drops: EventDrop[]) =>
+  JSON.stringify(
+    drops.map((drop) => ({ name: drop.name, quantity: drop.quantity })),
+    null,
+    2
+  );
 
 /** Tipos de evento soportados al crear y filtrar. */
 export const EVENT_TYPES = [
@@ -106,6 +170,8 @@ type RawEventItem = {
   Parties?: unknown[];
   partyCompositionResponseDtos?: unknown[];
   PartyCompositionResponseDtos?: unknown[];
+  drops?: unknown[];
+  Drops?: unknown[];
 };
 
 type RawPartyCompositionSlot = {
@@ -140,6 +206,36 @@ const normalizePartyComposition = (raw: RawPartyComposition): PartyComposition =
   };
 };
 
+type RawEventDrop = {
+  name?: string;
+  Name?: string;
+  quantity?: number;
+  Quantity?: number;
+  nombre?: string;
+  Nombre?: string;
+  cantidad?: number;
+  Cantidad?: number;
+};
+
+const normalizeEventDrop = (raw: RawEventDrop): EventDrop | null => {
+  const name = raw.name ?? raw.Name ?? raw.nombre ?? raw.Nombre;
+  const quantity = raw.quantity ?? raw.Quantity ?? raw.cantidad ?? raw.Cantidad;
+
+  if (typeof name !== 'string' || !name.trim()) return null;
+  if (typeof quantity !== 'number' || !Number.isFinite(quantity) || quantity <= 0) return null;
+
+  return { name: name.trim(), quantity };
+};
+
+const normalizeEventDrops = (raw: RawEventItem): EventDrop[] => {
+  const value = raw.drops ?? raw.Drops;
+  if (!Array.isArray(value)) return [];
+
+  return value
+    .map((item) => normalizeEventDrop(item as RawEventDrop))
+    .filter((drop): drop is EventDrop => drop !== null);
+};
+
 const normalizePartyCompositions = (raw: RawEventItem): PartyComposition[] => {
   const value =
     raw.partyCompositionResponseDtos ??
@@ -158,6 +254,7 @@ const normalizeEventItem = (raw: RawEventItem): EventItem => ({
   eventName: String(raw.eventName ?? raw.EventName ?? ''),
   eventType: String(raw.eventType ?? raw.EventType ?? ''),
   partyCompositions: normalizePartyCompositions(raw),
+  drops: normalizeEventDrops(raw),
 });
 
 const parseEventsResponse = async (response: Response): Promise<EventItem[]> => {
@@ -195,4 +292,20 @@ export const attachPartyToEvent = async (
   });
 
   if (!response.ok) throw new Error(`Error ${response.status}: No se pudo asignar la party al evento.`);
+};
+
+export const updateEventDrops = async (
+  token: string | null,
+  logout: () => void,
+  payload: UpdateEventDropsRequest
+): Promise<void> => {
+  const response = await authenticatedFetch('/api/event/updatedrops', token, logout, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(payload),
+  });
+
+  if (!response.ok) throw new Error(`Error ${response.status}: No se pudieron guardar los drops del evento.`);
 };
