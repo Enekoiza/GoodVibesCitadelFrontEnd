@@ -1,8 +1,13 @@
 import React from 'react';
+import { hasRegisteredRoles } from '../../constants';
+import { useAuth } from '../auth/context/AuthContext';
 import { PeopleListCard } from './components/PeopleListCard';
 import { UpcomingEventsCard } from './components/UpcomingEventsCard';
 
 export const Dashboard: React.FC = () => {
+  const { roles } = useAuth();
+  const showUpcomingEvents = hasRegisteredRoles(roles);
+
   return (
     <div className="space-y-6">
       <header className="mb-8">
@@ -15,9 +20,11 @@ export const Dashboard: React.FC = () => {
         <div className="min-w-0 flex-1">
           <PeopleListCard />
         </div>
-        <div className="w-full shrink-0 lg:w-auto">
-          <UpcomingEventsCard />
-        </div>
+        {showUpcomingEvents ? (
+          <div className="w-full shrink-0 lg:w-auto">
+            <UpcomingEventsCard />
+          </div>
+        ) : null}
       </div>
     </div>
   );
