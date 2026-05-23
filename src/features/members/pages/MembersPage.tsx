@@ -1,5 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
+import { ClassPhoto } from '../../../components/common/ClassPhoto';
 import { useAuth } from '../../auth/context/AuthContext';
+import { getCharacterClassName, getCharacterLevel, getCharacterName } from '../../characters/utils/characterFields';
 import { fetchAllUsers, type AppUser } from '../../users/api/usersApi';
 
 const membersIcon = (
@@ -141,14 +143,25 @@ export const MembersPage: React.FC = () => {
                       <td className="py-3 pr-4">
                         <div className="flex flex-wrap gap-1.5">
                           {(user.characters ?? []).length > 0 ? (
-                            user.characters.map((c, i) => (
-                              <span
-                                key={`${c.name}-${c.className}-${i}`}
-                                className="inline-flex items-center rounded-full border border-violet-500/20 bg-violet-500/15 px-2.5 py-0.5 text-xs font-semibold text-violet-400"
-                              >
-                                {c.name}
-                              </span>
-                            ))
+                            user.characters.map((c, i) => {
+                              const name = getCharacterName(c);
+                              const className = getCharacterClassName(c);
+                              const level = getCharacterLevel(c);
+                              return (
+                                <span
+                                  key={`${name}-${className}-${level}-${i}`}
+                                  className="inline-flex items-center gap-1.5 rounded-full border border-violet-500/20 bg-violet-500/15 py-0.5 pl-1 pr-2.5 text-xs font-semibold text-violet-400"
+                                >
+                                  <ClassPhoto
+                                    classNameValue={className}
+                                    alt={name || className}
+                                    size="sm"
+                                  />
+                                  {name}
+                                  <span className="text-violet-300/80">· {level}</span>
+                                </span>
+                              );
+                            })
                           ) : (
                             <span className="text-xs italic text-slate-600">Sin personajes</span>
                           )}
