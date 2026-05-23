@@ -1,5 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useAuth } from '../../auth/context/AuthContext';
+import { PartyAssignmentPreviewTable } from '../components/PartyAssignmentPreviewTable';
+import { partyRoleFields } from '../constants/partyRoles';
 import {
   fetchPartyCompositions,
   PARTY_TYPES,
@@ -8,7 +10,15 @@ import {
   type PartyType,
 } from '../api/partyBuilderApi';
 import { fetchAllUsers, type AppUser, type UserCharacterRow } from '../../users/api/usersApi';
-import { attachPartyToEvent, fetchAllEvents, type AttachPartyRequest, type EventItem } from '../../events/api/eventsApi';
+import {
+  attachPartyToEvent,
+  fetchAllEvents,
+  hasPartyComposition,
+  toAttachPartyEvent,
+  type AttachPartyRequest,
+  type EventItem,
+} from '../../events/api/eventsApi';
+import { ClassPhoto } from '../../../components/common/ClassPhoto';
 
 const eventDateFormatter = new Intl.DateTimeFormat('es-ES', {
   day: '2-digit',
@@ -33,20 +43,11 @@ const refreshIconPath = (
   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
 );
 
-const roleCountFields = [
-  { key: 'dpsCount', label: 'dps', className: 'border-red-500/20 bg-red-500/15 text-red-400' },
-  { key: 'bishopCount', label: 'bishop', className: 'border-emerald-500/20 bg-emerald-500/15 text-emerald-400' },
-  { key: 'bardCount', label: 'bard', className: 'border-violet-500/20 bg-violet-500/15 text-violet-400' },
-  { key: 'bufferCount', label: 'buffer', className: 'border-amber-500/20 bg-amber-500/15 text-amber-400' },
-  { key: 'tankCount', label: 'tank', className: 'border-cyan-500/20 bg-cyan-500/15 text-cyan-400' },
-  { key: 'rechargerCount', label: 'recharger', className: 'border-blue-500/20 bg-blue-500/15 text-blue-400' },
-] as const;
-
-type RoleCountKey = (typeof roleCountFields)[number]['key'];
+type RoleCountKey = (typeof partyRoleFields)[number]['key'];
 type RoleCounts = Record<RoleCountKey, number>;
 
 const getCompositionRoleTags = (composition: CompositionDto) =>
-  roleCountFields
+  partyRoleFields
     .map((field) => ({
       ...field,
       count: composition[field.key as RoleCountKey],
@@ -65,7 +66,7 @@ const formatEventDateTime = (iso: string) => {
 };
 
 const getEventKey = (event: EventItem) =>
-  `${event.eventName}-${event.eventTime}-${event.username}`;
+  event.eventId || `${event.eventName}-${event.eventTime}-${event.username}`;
 
 const getCharacterName = (character: UserCharacterRow) => character.name ?? character.Name ?? '';
 
@@ -77,34 +78,8 @@ const getCharacterType = (character: UserCharacterRow) =>
 const isCharacterForRole = (character: UserCharacterRow, role: string) =>
   getCharacterType(character).trim().toLowerCase() === role.trim().toLowerCase();
 
-const classPhotoExtensions = ['png', 'jpg', 'jpeg', 'webp'] as const;
-
-const getClassPhotoUrl = (className: string, extensionIndex: number) =>
-  `/ClassPhotos/${encodeURIComponent(className)}.${classPhotoExtensions[extensionIndex]}`;
-
 const selectClassName =
   'w-full cursor-pointer rounded-lg border border-slate-700 bg-slate-950/80 py-2 pl-3 pr-8 text-xs font-medium text-slate-200 shadow-sm focus:border-cyan-500/50 focus:outline-none focus:ring-2 focus:ring-cyan-500/20 disabled:opacity-50';
-
-const ClassPhoto: React.FC<{ classNameValue: string; alt: string }> = ({ classNameValue, alt }) => {
-  const [extensionIndex, setExtensionIndex] = useState(0);
-
-  if (!classNameValue || extensionIndex >= classPhotoExtensions.length) {
-    return (
-      <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-slate-800 text-[10px] font-bold text-slate-500">
-        ?
-      </span>
-    );
-  }
-
-  return (
-    <img
-      src={getClassPhotoUrl(classNameValue, extensionIndex)}
-      alt={alt}
-      className="h-6 w-6 shrink-0 rounded-full border border-slate-700 object-cover"
-      onError={() => setExtensionIndex((current) => current + 1)}
-    />
-  );
-};
 
 interface PartySlot {
   role: string;
@@ -113,13 +88,13 @@ interface PartySlot {
   characterName: string;
 }
 
-const emptyRoleCounts = roleCountFields.reduce(
+const emptyRoleCounts = partyRoleFields.reduce(
   (counts, field) => ({ ...counts, [field.key]: 0 }),
   {} as RoleCounts
 );
 
 const buildSlotsFromRoleCounts = (counts: RoleCounts): PartySlot[] =>
-  roleCountFields.flatMap((field) =>
+  partyRoleFields.flatMap((field) =>
     Array.from({ length: counts[field.key] }, () => ({
       role: field.label,
       roleClassName: field.className,
@@ -130,7 +105,7 @@ const buildSlotsFromRoleCounts = (counts: RoleCounts): PartySlot[] =>
 
 const buildSlotsFromComposition = (composition: CompositionDto): PartySlot[] =>
   buildSlotsFromRoleCounts(
-    roleCountFields.reduce(
+    partyRoleFields.reduce(
       (counts, field) => ({ ...counts, [field.key]: composition[field.key] }),
       {} as RoleCounts
     )
@@ -162,6 +137,7 @@ export const PartyBuilderPage: React.FC = () => {
   const [newAssignmentCounts, setNewAssignmentCounts] = useState<RoleCounts>(emptyRoleCounts);
   const [newAssignmentError, setNewAssignmentError] = useState<string | null>(null);
   const [isGeneratingAssignment, setIsGeneratingAssignment] = useState(false);
+  const [isCompositionConflictModalOpen, setIsCompositionConflictModalOpen] = useState(false);
 
   const loadCompositions = useCallback(async () => {
     setIsLoadingComps(true);
@@ -320,7 +296,7 @@ export const PartyBuilderPage: React.FC = () => {
     }
   };
 
-  const totalNewAssignmentSlots = roleCountFields.reduce(
+  const totalNewAssignmentSlots = partyRoleFields.reduce(
     (sum, field) => sum + newAssignmentCounts[field.key],
     0
   );
@@ -344,22 +320,37 @@ export const PartyBuilderPage: React.FC = () => {
     [events, selectedEventKey]
   );
 
-  const buildAttachPartyPayload = (): AttachPartyRequest | null => {
+  const buildAttachPartyPayload = (replaceExisting: boolean): AttachPartyRequest | null => {
     if (!assignmentName || !selectedEvent || !username) return null;
 
+    if (!selectedEvent.eventId) return null;
+
     return {
-      Event: selectedEvent,
+      Event: toAttachPartyEvent(selectedEvent),
       AssignedByUsername: username,
       Slots: previewRows.map((slot) => ({
         Role: slot.role,
         Username: slot.userName,
         CharacterName: slot.characterName,
       })),
+      ReplaceExisting: replaceExisting,
     };
   };
 
-  const saveAssignment = async () => {
-    const payload = buildAttachPartyPayload();
+  const reloadEvents = useCallback(async () => {
+    setIsLoadingEvents(true);
+    setEventsError(null);
+    try {
+      setEvents(await fetchAllEvents(token, logout));
+    } catch (err: unknown) {
+      setEventsError(getErrorMessage(err));
+    } finally {
+      setIsLoadingEvents(false);
+    }
+  }, [logout, token]);
+
+  const saveAssignment = async (replaceExisting: boolean) => {
+    const payload = buildAttachPartyPayload(replaceExisting);
 
     if (!payload) {
       setSaveAssignmentMessage(null);
@@ -373,12 +364,35 @@ export const PartyBuilderPage: React.FC = () => {
 
     try {
       await attachPartyToEvent(token, logout, payload);
-      setSaveAssignmentMessage('Party asignada al evento correctamente.');
+      await reloadEvents();
+      setSaveAssignmentMessage(
+        replaceExisting
+          ? 'Composición sobrescrita correctamente.'
+          : 'Party asignada al evento correctamente.'
+      );
+      setIsCompositionConflictModalOpen(false);
     } catch (err: unknown) {
       setSaveAssignmentError(getErrorMessage(err));
     } finally {
       setIsSavingAssignment(false);
     }
+  };
+
+  const handleSaveAssignmentClick = () => {
+    const payload = buildAttachPartyPayload(false);
+
+    if (!payload) {
+      setSaveAssignmentMessage(null);
+      setSaveAssignmentError('Selecciona un evento antes de guardar.');
+      return;
+    }
+
+    if (selectedEvent && hasPartyComposition(selectedEvent.partyCompositions)) {
+      setIsCompositionConflictModalOpen(true);
+      return;
+    }
+
+    void saveAssignment(false);
   };
 
   return (
@@ -658,39 +672,13 @@ export const PartyBuilderPage: React.FC = () => {
                     <h4 className="text-xl font-bold tracking-tight text-cyan-100">Preview</h4>
                   </div>
 
-                  <div className="overflow-hidden rounded-xl border border-slate-700/70 bg-slate-950/60">
-                    <table className="w-full text-xs">
-                      <caption className="sr-only">Preview de asignación</caption>
-                      <thead className="bg-slate-900/80 text-slate-500">
-                        <tr>
-                          <th scope="col" className="px-3 py-2 text-left font-medium uppercase tracking-wider">
-                            Rol
-                          </th>
-                          <th scope="col" className="px-3 py-2 text-left font-medium uppercase tracking-wider">
-                            Usuario
-                          </th>
-                          <th scope="col" className="px-3 py-2 text-left font-medium uppercase tracking-wider">
-                            Personaje
-                          </th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-slate-800/80">
-                        {previewRows.map((slot, index) => (
-                          <tr key={`${slot.role}-${slot.userId}-${slot.characterName}-${index}`}>
-                            <td className="px-3 py-2">
-                              <span
-                                className={`inline-flex w-fit items-center rounded-full border px-2 py-0.5 text-[11px] font-semibold ${slot.roleClassName}`}
-                              >
-                                {slot.role}
-                              </span>
-                            </td>
-                            <td className="px-3 py-2 font-medium text-slate-200">{slot.userName}</td>
-                            <td className="px-3 py-2 text-slate-300">{slot.characterName}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
+                  <PartyAssignmentPreviewTable
+                    rows={previewRows.map((slot) => ({
+                      role: slot.role,
+                      userName: slot.userName,
+                      characterName: slot.characterName,
+                    }))}
+                  />
 
                   <label className="mt-4 block">
                     <span className="mb-2 block text-xs font-medium uppercase tracking-wider text-cyan-200/70">
@@ -742,7 +730,7 @@ export const PartyBuilderPage: React.FC = () => {
 
                   <button
                     type="button"
-                    onClick={() => void saveAssignment()}
+                    onClick={handleSaveAssignmentClick}
                     disabled={isSavingAssignment || selectedEvent === null}
                     className="mt-4 w-full rounded-xl bg-cyan-400 px-4 py-2.5 text-sm font-semibold text-slate-950 shadow-lg shadow-cyan-950/30 transition-colors hover:bg-cyan-300 focus:outline-none focus:ring-2 focus:ring-cyan-300/50 disabled:cursor-not-allowed disabled:opacity-50"
                   >
@@ -754,6 +742,76 @@ export const PartyBuilderPage: React.FC = () => {
           )}
         </div>
       </div>
+
+      {isCompositionConflictModalOpen && selectedEvent ? (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 px-4 backdrop-blur-sm"
+          onClick={(event) => {
+            if (event.target === event.currentTarget && !isSavingAssignment) {
+              setIsCompositionConflictModalOpen(false);
+            }
+          }}
+        >
+          <div className="w-full max-w-lg rounded-2xl border border-slate-700 bg-slate-900 shadow-2xl">
+            <div className="flex items-center justify-between border-b border-slate-800 px-6 py-4">
+              <div>
+                <h3 className="text-sm font-semibold text-slate-100">Composición ya asignada</h3>
+                <p className="mt-1 text-xs text-slate-500">
+                  «{selectedEvent.eventName}»{' '}
+                  {selectedEvent.partyCompositions.length === 1
+                    ? 'ya tiene una composición asignada.'
+                    : `ya tiene ${selectedEvent.partyCompositions.length} composiciones asignadas.`}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsCompositionConflictModalOpen(false)}
+                disabled={isSavingAssignment}
+                title="Cerrar"
+                className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-500 transition-colors hover:bg-slate-800 hover:text-slate-300 disabled:opacity-40"
+              >
+                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden>
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            <div className="space-y-4 p-6">
+              <p className="text-sm text-slate-300">
+                ¿Quieres añadir esta composición como una extra o sobrescribir la composición existente del evento?
+              </p>
+
+              <div className="flex flex-col gap-2 sm:flex-row">
+                <button
+                  type="button"
+                  onClick={() => void saveAssignment(false)}
+                  disabled={isSavingAssignment}
+                  className="flex-1 rounded-xl border border-cyan-500/30 bg-cyan-500/10 px-4 py-2.5 text-sm font-semibold text-cyan-300 transition-colors hover:bg-cyan-500/20 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {isSavingAssignment ? 'Guardando...' : 'Añadir composición extra'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => void saveAssignment(true)}
+                  disabled={isSavingAssignment}
+                  className="flex-1 rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-2.5 text-sm font-semibold text-amber-300 transition-colors hover:bg-amber-500/20 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {isSavingAssignment ? 'Guardando...' : 'Sobrescribir existente'}
+                </button>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setIsCompositionConflictModalOpen(false)}
+                disabled={isSavingAssignment}
+                className="w-full rounded-lg bg-slate-800 px-4 py-2 text-xs font-medium text-slate-300 transition-colors hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                Cancelar
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
 
       {isNewAssignmentModalOpen ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 px-4 backdrop-blur-sm">
@@ -806,7 +864,7 @@ export const PartyBuilderPage: React.FC = () => {
                 </select>
               </label>
 
-              {roleCountFields.map((field) => (
+              {partyRoleFields.map((field) => (
                 <label
                   key={field.key}
                   className="flex items-center justify-between gap-4 rounded-xl border border-slate-800 bg-slate-950/40 px-4 py-3"
