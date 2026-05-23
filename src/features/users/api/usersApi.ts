@@ -9,6 +9,19 @@ export interface UserCharacterRow {
   Type?: string;
   classType?: string;
   ClassType?: string;
+  level?: number;
+  Level?: number;
+  login?: string;
+  Login?: string;
+  hasPassword?: boolean;
+  HasPassword?: boolean;
+  /** Form draft only (admin edits). Never returned by the API. */
+  password?: string;
+  Password?: string;
+  /**
+   * When saving: undefined = do not change stored password; '' = clear; non-empty = new plaintext (hashed server-side).
+   */
+  passwordChange?: string | null;
 }
 
 export interface AppUser {
