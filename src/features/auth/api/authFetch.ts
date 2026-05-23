@@ -24,9 +24,13 @@ export const authenticatedFetch = async (
     headers,
   });
 
-  if (response.status === 401 || response.status === 403) {
+  if (response.status === 401) {
     logout();
     throw new Error(SESSION_EXPIRED_MESSAGE);
+  }
+
+  if (response.status === 403) {
+    throw new Error('No tienes permiso para realizar esta acción.');
   }
 
   return response;
