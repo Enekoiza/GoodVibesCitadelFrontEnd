@@ -193,7 +193,7 @@ export const UpcomingEventsCard: React.FC = () => {
             <div className="max-h-[60vh] space-y-3 overflow-y-auto p-6 custom-scrollbar">
               {openedEvents.map((event, index) => (
                 <article
-                  key={`${event.eventTime}-${event.eventName}-${index}`}
+                  key={event.eventId || `${event.eventTime}-${event.eventName}-${index}`}
                   className="rounded-xl border border-slate-800 bg-slate-800/45 p-4"
                 >
                   <div className="mb-3 flex items-center justify-between gap-3">

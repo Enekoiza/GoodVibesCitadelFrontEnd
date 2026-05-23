@@ -1,7 +1,15 @@
 import React, { memo, useState, useEffect, useCallback, useMemo } from 'react';
 import { useAuth } from '../../auth/context/AuthContext';
 import { PARTY_TYPES } from '../../party-builder/api/partyBuilderApi';
-import { fetchAllEvents, getEventTypeBadge } from '../api/eventsApi';
+import { PartyAssignmentPreviewTable } from '../../party-builder/components/PartyAssignmentPreviewTable';
+import {
+  fetchAllEvents,
+  getEventPartyPreviewRows,
+  getEventTypeBadge,
+  getPartyCompositionBadge,
+  getPartyCompositionLabel,
+  hasPartyComposition,
+} from '../api/eventsApi';
 import type { EventItem } from '../api/eventsApi';
 import { CreateEventModal } from '../components/CreateEventModal';
 
@@ -44,25 +52,48 @@ const formatDateTime = (iso: string) => {
 };
 
 const getEventKey = (event: EventItem) =>
-  `${event.eventName}-${event.eventTime}-${event.username}`;
+  event.eventId || `${event.eventName}-${event.eventTime}-${event.username}`;
 
 const getEventsErrorMessage = (err: unknown) =>
   err instanceof Error ? err.message : 'Error desconocido al cargar los eventos.';
 
-const EventsTable = memo(function EventsTable({ events }: { events: EventItem[] }) {
+const closeIcon = (
+  <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden>
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+  </svg>
+);
+
+const EventsTable = memo(function EventsTable({
+  events,
+  onEventClick,
+}: {
+  events: EventItem[];
+  onEventClick: (event: EventItem) => void;
+}) {
   return (
     <table className="w-full text-sm">
       <thead>
         <tr className="border-b border-slate-800">
+          <th scope="col" className="hidden">
+            ID
+          </th>
           <th className="pb-3 text-left text-xs font-medium uppercase tracking-wider text-slate-500">Evento</th>
           <th className="pb-3 text-left text-xs font-medium uppercase tracking-wider text-slate-500">Tipo</th>
           <th className="pb-3 text-left text-xs font-medium uppercase tracking-wider text-slate-500">Fecha y hora</th>
+          <th className="pb-3 text-left text-xs font-medium uppercase tracking-wider text-slate-500">Party Composition</th>
           <th className="pb-3 text-left text-xs font-medium uppercase tracking-wider text-slate-500">Creado por</th>
         </tr>
       </thead>
       <tbody className="divide-y divide-slate-800/60">
         {events.map((event) => (
-          <tr key={getEventKey(event)} className="transition-colors hover:bg-slate-800/40">
+          <tr
+            key={getEventKey(event)}
+            onClick={() => onEventClick(event)}
+            className="cursor-pointer transition-colors hover:bg-slate-800/40"
+          >
+            <td className="hidden" data-event-id={event.eventId}>
+              {event.eventId}
+            </td>
             <td className="py-3 pr-4 font-medium text-slate-200">{event.eventName}</td>
             <td className="py-3 pr-4">
               <span
@@ -72,6 +103,13 @@ const EventsTable = memo(function EventsTable({ events }: { events: EventItem[] 
               </span>
             </td>
             <td className="py-3 pr-4 text-slate-400">{formatDateTime(event.eventTime)}</td>
+            <td className="py-3 pr-4">
+              <span
+                className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold ${getPartyCompositionBadge(event.partyCompositions)}`}
+              >
+                {getPartyCompositionLabel(event.partyCompositions)}
+              </span>
+            </td>
             <td className="py-3 text-slate-400">{event.username}</td>
           </tr>
         ))}
@@ -86,6 +124,7 @@ export const EventsPage: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [selectedEvent, setSelectedEvent] = useState<EventItem | null>(null);
   const [typeFilter, setTypeFilter] = useState<string>('');
 
   const fetchEvents = useCallback(async () => {
@@ -229,13 +268,57 @@ export const EventsPage: React.FC = () => {
                       : 'No hay eventos registrados todavía.'}
                   </p>
                 ) : (
-                  <EventsTable events={filteredEvents} />
+                  <EventsTable events={filteredEvents} onEventClick={setSelectedEvent} />
                 )}
               </div>
             )}
           </div>
         </div>
       </div>
+
+      {selectedEvent ? (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm"
+          onClick={(event) => {
+            if (event.target === event.currentTarget) setSelectedEvent(null);
+          }}
+        >
+          <div className="w-full max-w-lg rounded-2xl border border-slate-700 bg-slate-900 shadow-2xl">
+            <div className="flex items-start justify-between gap-4 border-b border-slate-800 px-6 py-4">
+              <div className="min-w-0">
+                <h3 className="text-base font-semibold text-slate-100">
+                  {hasPartyComposition(selectedEvent.partyCompositions)
+                    ? selectedEvent.eventName
+                    : 'Composición de party'}
+                </h3>
+                {hasPartyComposition(selectedEvent.partyCompositions) ? (
+                  <p className="mt-1 text-sm text-slate-500">
+                    {selectedEvent.eventType} · {formatDateTime(selectedEvent.eventTime)}
+                  </p>
+                ) : null}
+              </div>
+              <button
+                type="button"
+                onClick={() => setSelectedEvent(null)}
+                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-slate-500 transition-colors hover:bg-slate-800 hover:text-slate-300"
+                aria-label="Cerrar modal"
+              >
+                {closeIcon}
+              </button>
+            </div>
+
+            <div className="p-6">
+              {hasPartyComposition(selectedEvent.partyCompositions) ? (
+                <PartyAssignmentPreviewTable rows={getEventPartyPreviewRows(selectedEvent)} />
+              ) : (
+                <p className="py-6 text-center text-sm text-slate-400">
+                  Este evento no tiene ninguna composicion asignada.
+                </p>
+              )}
+            </div>
+          </div>
+        </div>
+      ) : null}
 
       {isModalOpen ? (
         <CreateEventModal
