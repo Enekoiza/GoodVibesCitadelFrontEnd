@@ -2,11 +2,11 @@ import React, { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import logoUrl from '../../assets/logo.png';
 import { useAuth } from '../../features/auth/context/AuthContext';
-import { hasAdminRole } from '../../constants';
+import { canAccessAccountSettings, hasAdminRole } from '../../constants';
 
 export const Sidebar: React.FC = () => {
   const { username, role, roles, logout } = useAuth();
-  const [showLogout, setShowLogout] = useState(false);
+  const [showUserMenu, setShowUserMenu] = useState(false);
   const [adminDropdownOpen, setAdminDropdownOpen] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
@@ -16,6 +16,7 @@ export const Sidebar: React.FC = () => {
   const initial = displayUsername.charAt(0).toUpperCase();
   const isAdmin = hasAdminRole(roles);
   const isWaitingUser = roles.length === 0;
+  const showAccountSettings = canAccessAccountSettings(roles);
 
   const isActive = (path: string) => location.pathname === path;
 
@@ -23,11 +24,38 @@ export const Sidebar: React.FC = () => {
 
   const UserBlock = ({ className }: { className?: string }) => (
     <div className={`relative ${className ?? ''}`}>
-      {showLogout && (
+      {showUserMenu && (
         <div className="absolute bottom-full left-4 right-4 mb-2 w-auto max-w-none rounded-lg border border-slate-700 bg-slate-800 p-1 shadow-lg md:left-4 md:right-auto md:w-56">
+          {showAccountSettings ? (
+            <button
+              type="button"
+              onClick={() => {
+                setShowUserMenu(false);
+                navigate('/cuenta');
+              }}
+              className={`flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm transition-colors hover:bg-slate-700/50 ${
+                isActive('/cuenta') ? 'text-cyan-400' : 'text-slate-300'
+              }`}
+            >
+              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
+                />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+              </svg>
+              Ajustes de cuenta
+            </button>
+          ) : null}
+          {showAccountSettings ? <div className="my-1 border-t border-slate-700" /> : null}
           <button
             type="button"
-            onClick={logout}
+            onClick={() => {
+              setShowUserMenu(false);
+              logout();
+            }}
             className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm text-red-400 transition-colors hover:bg-slate-700/50"
           >
             <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -40,7 +68,7 @@ export const Sidebar: React.FC = () => {
 
       <button
         type="button"
-        onClick={() => setShowLogout(!showLogout)}
+        onClick={() => setShowUserMenu(!showUserMenu)}
         className="flex w-full items-center gap-3 rounded-xl p-2 text-left transition-colors hover:bg-slate-800"
       >
         <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-slate-700 font-bold text-slate-300">

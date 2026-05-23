@@ -12,3 +12,8 @@ export function hasAdminRole(roles: string[]): boolean {
 export function hasRegisteredRoles(roles: string[]): boolean {
   return roles.length > 0;
 }
+
+/** Account settings are for regular members only (not Admin / CP Admin). */
+export function canAccessAccountSettings(roles: string[]): boolean {
+  return hasRegisteredRoles(roles) && !hasAdminRole(roles);
+}
