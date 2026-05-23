@@ -1,41 +1,20 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { authenticatedFetch } from '../../auth/api/authFetch';
 import { useAuth } from '../../auth/context/AuthContext';
+import { HoldToRevealPasswordInput } from '../../../components/common/HoldToRevealPasswordInput';
+import { CLASS_NAMES } from '../../characters/constants/classNames';
+import {
+  clampCharacterLevel,
+  getCharacterClassName,
+  getCharacterLevel,
+  getCharacterLogin,
+  getCharacterName,
+  getCharacterPassword,
+  characterPasswordForUpdate,
+  MAX_CHARACTER_LEVEL,
+  MIN_CHARACTER_LEVEL,
+} from '../../characters/utils/characterFields';
 import type { UserCharacterRow } from '../../users/api/usersApi';
-
-const CLASS_NAMES = [
-  'AbyssWalker',
-  'Bishop',
-  'BladeDancer',
-  'DarkAvenger',
-  'Destroyer',
-  'ElementalSummoner',
-  'ElvenElder',
-  'Gladiator',
-  'Hawkeye',
-  'MoonlightSentinel',
-  'Necromancer',
-  'Overlord',
-  'Paladin',
-  'PhantomRanger',
-  'PhantomSummoner',
-  'PlainsWalker',
-  'Prophet',
-  'ShillenElder',
-  'ShillenKnight',
-  'Sorcerer',
-  'SpellHowler',
-  'SpellSinger',
-  'Spoiler',
-  'SwordSinger',
-  'TempleKnight',
-  'TreasureHunter',
-  'Tyrant',
-  'Warcryer',
-  'Warlock',
-  'Warlord',
-  'Warsmith',
-];
 
 interface UserRolesModalProps {
   username: string;
@@ -62,6 +41,9 @@ export const UserRolesModal: React.FC<UserRolesModalProps> = ({
   const [editableCharacters, setEditableCharacters] = useState<UserCharacterRow[]>(characters);
   const [newCharacterName, setNewCharacterName] = useState('');
   const [newCharacterClass, setNewCharacterClass] = useState('AbyssWalker');
+  const [newCharacterLevel, setNewCharacterLevel] = useState(MIN_CHARACTER_LEVEL);
+  const [newCharacterLogin, setNewCharacterLogin] = useState('');
+  const [newCharacterPassword, setNewCharacterPassword] = useState('');
   const [isClassDropdownOpen, setIsClassDropdownOpen] = useState(false);
 
   // Fetch all available roles
@@ -104,8 +86,16 @@ export const UserRolesModal: React.FC<UserRolesModalProps> = ({
     setIsSaving(true);
     setSaveError(null);
     try {
-      const newCharacter = newCharacterName.trim()
-        ? [{ name: newCharacterName.trim(), className: newCharacterClass }]
+      const newCharacter: UserCharacterRow[] = newCharacterName.trim()
+        ? [
+            {
+              name: newCharacterName.trim(),
+              className: newCharacterClass,
+              level: clampCharacterLevel(newCharacterLevel),
+              login: newCharacterLogin.trim(),
+              passwordChange: newCharacterPassword.length > 0 ? newCharacterPassword : undefined,
+            },
+          ]
         : [];
       const updatedCharacters = [...editableCharacters, ...newCharacter];
 
@@ -137,19 +127,43 @@ export const UserRolesModal: React.FC<UserRolesModalProps> = ({
           },
           body: JSON.stringify({
             Username: username,
-            Characters: updatedCharacters.map((character) => ({
-              Name: character.name,
-              ClassName: character.className,
-            })),
+            Characters: updatedCharacters.map((character) => {
+              const password = characterPasswordForUpdate(character);
+              return {
+                Name: getCharacterName(character),
+                ClassName: getCharacterClassName(character),
+                ClassType:
+                  (character as UserCharacterRow).type ??
+                  (character as UserCharacterRow).Type ??
+                  (character as UserCharacterRow).classType ??
+                  (character as UserCharacterRow).ClassType ??
+                  '',
+                Level: getCharacterLevel(character),
+                Login: getCharacterLogin(character),
+                ...(password !== undefined ? { Password: password } : {}),
+              };
+            }),
           }),
         }
       );
-      if (!charactersResponse.ok) throw new Error(`Error ${charactersResponse.status}`);
+      if (!charactersResponse.ok) {
+        const errorBody = (await charactersResponse.json().catch(() => null)) as {
+          message?: string;
+          Message?: string;
+        } | null;
+        throw new Error(
+          errorBody?.message ??
+            errorBody?.Message ??
+            `Error ${charactersResponse.status}: No se pudieron guardar los personajes.`
+        );
+      }
 
       onSaved();
       onClose();
-    } catch (err: any) {
-      setSaveError('No se pudieron guardar los cambios. Inténtalo de nuevo.');
+    } catch (err: unknown) {
+      setSaveError(
+        err instanceof Error ? err.message : 'No se pudieron guardar los cambios. Inténtalo de nuevo.'
+      );
     } finally {
       setIsSaving(false);
     }
@@ -235,18 +249,21 @@ export const UserRolesModal: React.FC<UserRolesModalProps> = ({
           <div className="border-t border-slate-800 pt-5">
             <p className="mb-3 text-xs text-slate-500 uppercase tracking-wider font-medium">Personajes del miembro</p>
             <div className="overflow-visible rounded-lg border border-slate-800">
-              <table className="w-full table-fixed text-sm">
+              <table className="w-full min-w-[48rem] text-sm">
                 <thead className="bg-slate-900/95">
                   <tr className="border-b border-slate-800">
                     <th className="w-10 px-3 py-2" />
                     <th className="w-12 px-3 py-2 text-left text-xs font-medium uppercase tracking-wider text-slate-500">#</th>
                     <th className="min-w-0 px-3 py-2 text-left text-xs font-medium uppercase tracking-wider text-slate-500">Personaje</th>
-                    <th className="min-w-0 w-[42%] px-3 py-2 text-left text-xs font-medium uppercase tracking-wider text-slate-500">Clase</th>
+                    <th className="min-w-0 px-3 py-2 text-left text-xs font-medium uppercase tracking-wider text-slate-500">Clase</th>
+                    <th className="w-24 px-3 py-2 text-left text-xs font-medium uppercase tracking-wider text-slate-500">Nivel</th>
+                    <th className="min-w-[7rem] px-3 py-2 text-left text-xs font-medium uppercase tracking-wider text-slate-500">Login</th>
+                    <th className="min-w-[9rem] px-3 py-2 text-left text-xs font-medium uppercase tracking-wider text-slate-500">Password</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-800/60">
                   {editableCharacters.map((char, index) => (
-                    <tr key={`${char.name}-${char.className}-${index}`} className="bg-slate-900/30">
+                    <tr key={`${getCharacterName(char)}-${getCharacterClassName(char)}-${index}`} className="bg-slate-900/30">
                       <td className="px-3 py-2.5">
                         <button
                           type="button"
@@ -261,17 +278,60 @@ export const UserRolesModal: React.FC<UserRolesModalProps> = ({
                       </td>
                       <td className="px-3 py-2.5 text-slate-500 tabular-nums">{index + 1}</td>
                       <td className="min-w-0 px-3 py-2.5 font-medium text-slate-200">
-                        <span className="block break-words">{char.name}</span>
+                        <span className="block break-words">{getCharacterName(char)}</span>
                       </td>
                       <td className="min-w-0 px-3 py-2.5 text-slate-300">
                         <div className="flex min-w-0 items-center gap-2">
                           <img
-                            src={`/ClassPhotos/${char.className}.png`}
-                            alt={char.className}
+                            src={`/ClassPhotos/${getCharacterClassName(char)}.png`}
+                            alt={getCharacterClassName(char)}
                             className="h-6 w-6 shrink-0 rounded object-cover"
                           />
-                          <span className="min-w-0 break-words">{char.className}</span>
+                          <span className="min-w-0 break-words">{getCharacterClassName(char)}</span>
                         </div>
+                      </td>
+                      <td className="px-3 py-2.5">
+                        <input
+                          type="number"
+                          min={MIN_CHARACTER_LEVEL}
+                          max={MAX_CHARACTER_LEVEL}
+                          value={getCharacterLevel(char)}
+                          onChange={(event) => {
+                            const level = clampCharacterLevel(
+                              Number.parseInt(event.target.value, 10) || MIN_CHARACTER_LEVEL
+                            );
+                            setEditableCharacters((current) =>
+                              current.map((item, i) => (i === index ? { ...item, level } : item))
+                            );
+                          }}
+                          className="input-no-spin w-20 rounded-lg border border-slate-700 bg-slate-800 px-2 py-1.5 text-center text-sm tabular-nums text-slate-200 outline-none transition-colors focus:border-cyan-500/60"
+                        />
+                      </td>
+                      <td className="px-3 py-2.5">
+                        <input
+                          type="text"
+                          value={getCharacterLogin(char)}
+                          onChange={(event) => {
+                            const login = event.target.value;
+                            setEditableCharacters((current) =>
+                              current.map((item, i) => (i === index ? { ...item, login } : item))
+                            );
+                          }}
+                          placeholder="Login"
+                          autoComplete="off"
+                          className="w-full min-w-[6rem] rounded-lg border border-slate-700 bg-slate-800 px-2 py-1.5 text-sm text-slate-200 outline-none transition-colors placeholder:text-slate-600 focus:border-cyan-500/60"
+                        />
+                      </td>
+                      <td className="px-3 py-2.5">
+                        <HoldToRevealPasswordInput
+                          value={getCharacterPassword(char)}
+                          onChange={(password) => {
+                            setEditableCharacters((current) =>
+                              current.map((item, i) => (i === index ? { ...item, password } : item))
+                            );
+                          }}
+                          placeholder="Password"
+                        />
                       </td>
                     </tr>
                   ))}
@@ -332,6 +392,37 @@ export const UserRolesModal: React.FC<UserRolesModalProps> = ({
                           ))}
                         </div>
                       )}
+                    </td>
+                    <td className="px-3 py-2.5">
+                      <input
+                        type="number"
+                        min={MIN_CHARACTER_LEVEL}
+                        max={MAX_CHARACTER_LEVEL}
+                        value={newCharacterLevel}
+                        onChange={(event) =>
+                          setNewCharacterLevel(
+                            clampCharacterLevel(Number.parseInt(event.target.value, 10) || MIN_CHARACTER_LEVEL)
+                          )
+                        }
+                        className="input-no-spin w-20 rounded-lg border border-slate-700 bg-slate-800 px-2 py-1.5 text-center text-sm tabular-nums text-slate-200 outline-none transition-colors focus:border-cyan-500/60"
+                      />
+                    </td>
+                    <td className="px-3 py-2.5">
+                      <input
+                        type="text"
+                        value={newCharacterLogin}
+                        onChange={(event) => setNewCharacterLogin(event.target.value)}
+                        placeholder="Login"
+                        autoComplete="off"
+                        className="w-full min-w-0 rounded-lg border border-slate-700 bg-slate-800 px-3 py-2 text-sm text-slate-200 outline-none transition-colors placeholder:text-slate-600 focus:border-cyan-500/60"
+                      />
+                    </td>
+                    <td className="px-3 py-2.5">
+                      <HoldToRevealPasswordInput
+                        value={newCharacterPassword}
+                        onChange={setNewCharacterPassword}
+                        placeholder="Password"
+                      />
                     </td>
                   </tr>
                 </tbody>
