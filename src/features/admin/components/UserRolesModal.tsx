@@ -177,11 +177,11 @@ export const UserRolesModal: React.FC<UserRolesModalProps> = ({
   return (
     <div
       onClick={handleBackdropClick}
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-3 backdrop-blur-sm sm:p-4"
     >
-      <div className="w-full max-w-4xl rounded-2xl border border-slate-700 bg-slate-900 shadow-2xl">
+      <div className="flex max-h-[calc(100dvh-1.5rem)] w-full max-w-4xl flex-col rounded-2xl border border-slate-700 bg-slate-900 shadow-2xl sm:max-h-[calc(100dvh-2rem)]">
         {/* Header */}
-        <div className="flex items-center justify-between border-b border-slate-800 px-6 py-4">
+        <div className="flex items-center justify-between border-b border-slate-800 px-4 py-4 sm:px-6">
           <div>
             <h3 className="text-base font-semibold text-slate-100">Gestionar Miembro</h3>
             <p className="text-sm text-slate-500 mt-0.5">
@@ -199,7 +199,7 @@ export const UserRolesModal: React.FC<UserRolesModalProps> = ({
         </div>
 
         {/* Body */}
-        <div className="px-6 py-5 space-y-6">
+        <div className="min-h-0 space-y-6 overflow-y-auto px-4 py-5 sm:px-6">
           <div>
             {isLoadingRoles ? (
               <div className="flex items-center justify-center py-8">
@@ -248,7 +248,7 @@ export const UserRolesModal: React.FC<UserRolesModalProps> = ({
 
           <div className="border-t border-slate-800 pt-5">
             <p className="mb-3 text-xs text-slate-500 uppercase tracking-wider font-medium">Personajes del miembro</p>
-            <div className="overflow-visible rounded-lg border border-slate-800">
+            <div className="overflow-x-auto rounded-lg border border-slate-800">
               <table className="w-full min-w-[48rem] text-sm">
                 <thead className="bg-slate-900/95">
                   <tr className="border-b border-slate-800">
@@ -438,7 +438,7 @@ export const UserRolesModal: React.FC<UserRolesModalProps> = ({
         </div>
 
         {/* Footer */}
-        <div className="flex items-center justify-end gap-3 border-t border-slate-800 px-6 py-4">
+        <div className="flex flex-col-reverse gap-3 border-t border-slate-800 px-4 py-4 sm:flex-row sm:items-center sm:justify-end sm:px-6">
           <button
             onClick={onClose}
             className="rounded-xl px-4 py-2 text-sm font-medium text-slate-400 transition-colors hover:bg-slate-800 hover:text-slate-200"

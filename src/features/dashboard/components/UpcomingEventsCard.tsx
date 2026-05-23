@@ -110,14 +110,12 @@ export const UpcomingEventsCard: React.FC = () => {
                 </span>
               </div>
 
-              <div
-                className="inline-grid w-max grid-cols-7 gap-2 text-center"
-                onClick={(e) => e.stopPropagation()}
-              >
+              <div className="overflow-x-auto" onClick={(e) => e.stopPropagation()}>
+                <div className="inline-grid min-w-full grid-cols-7 gap-1 text-center sm:w-max sm:min-w-0 sm:gap-2">
                 {WEEK_DAYS.map((day) => (
                   <span
                     key={day}
-                    className="flex h-10 w-10 items-center justify-center text-xs font-semibold uppercase text-slate-500"
+                    className="flex h-9 w-9 items-center justify-center text-xs font-semibold uppercase text-slate-500 sm:h-10 sm:w-10"
                   >
                     {day}
                   </span>
@@ -125,7 +123,7 @@ export const UpcomingEventsCard: React.FC = () => {
 
                 {days.map((day, index) => {
                   if (!day) {
-                    return <div key={`empty-${index}`} className="h-10 w-10" aria-hidden />;
+                    return <div key={`empty-${index}`} className="h-9 w-9 sm:h-10 sm:w-10" aria-hidden />;
                   }
 
                   const dayKey = toDayKey(day);
@@ -139,7 +137,7 @@ export const UpcomingEventsCard: React.FC = () => {
                       onClick={() => {
                         if (hasEvents) setOpenedDay(dayKey);
                       }}
-                      className={`relative flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border text-sm font-semibold transition-all ${
+                      className={`relative flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border text-sm font-semibold transition-all sm:h-10 sm:w-10 ${
                         hasEvents
                           ? 'border-orange-400/40 bg-orange-500/15 text-orange-200 hover:border-orange-300/70 hover:bg-orange-500/25'
                           : 'cursor-default border-slate-800 bg-slate-900/70 text-slate-500'
@@ -153,6 +151,7 @@ export const UpcomingEventsCard: React.FC = () => {
                     </button>
                   );
                 })}
+                </div>
               </div>
             </div>
           )}
@@ -161,13 +160,13 @@ export const UpcomingEventsCard: React.FC = () => {
 
       {openedDay && openedDate && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-3 backdrop-blur-sm sm:p-4"
           onClick={(event) => {
             if (event.target === event.currentTarget) setOpenedDay(null);
           }}
         >
-          <div className="w-full max-w-lg rounded-2xl border border-slate-700 bg-slate-900 shadow-2xl">
-            <div className="flex items-start justify-between gap-4 border-b border-slate-800 px-6 py-4">
+          <div className="flex max-h-[calc(100dvh-1.5rem)] w-full max-w-lg flex-col rounded-2xl border border-slate-700 bg-slate-900 shadow-2xl sm:max-h-[calc(100dvh-2rem)]">
+            <div className="flex items-start justify-between gap-4 border-b border-slate-800 px-4 py-4 sm:px-6">
               <div>
                 <h3 className="text-base font-semibold text-slate-100">Eventos del día</h3>
                 <p className="mt-1 text-sm capitalize text-slate-500">
@@ -190,7 +189,7 @@ export const UpcomingEventsCard: React.FC = () => {
               </button>
             </div>
 
-            <div className="max-h-[60vh] space-y-3 overflow-y-auto p-6 custom-scrollbar">
+            <div className="min-h-0 space-y-3 overflow-y-auto p-4 custom-scrollbar sm:p-6">
               {openedEvents.map((event, index) => (
                 <article
                   key={event.eventId || `${event.eventTime}-${event.eventName}-${index}`}

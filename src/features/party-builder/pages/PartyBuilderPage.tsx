@@ -404,7 +404,7 @@ export const PartyBuilderPage: React.FC = () => {
 
       {/* Compositions table */}
       <div className="order-2 rounded-2xl border border-slate-800 bg-slate-900/50 shadow-xl">
-        <div className="flex items-center justify-between gap-4 border-b border-slate-800 px-6 py-4">
+        <div className="flex flex-col gap-3 border-b border-slate-800 px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6">
           <div className="flex min-w-0 flex-1 items-center gap-3">
             <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-cyan-500/10">
               {partyBuilderIcon}
@@ -437,7 +437,7 @@ export const PartyBuilderPage: React.FC = () => {
           </button>
         </div>
 
-        <div className="p-6">
+        <div className="p-4 sm:p-6">
           {isLoadingComps ? (
             <div className="flex flex-col items-center justify-center gap-3 py-12">
               <div className="h-8 w-8 animate-spin rounded-full border-4 border-slate-700 border-t-cyan-500" />
@@ -524,7 +524,7 @@ export const PartyBuilderPage: React.FC = () => {
 
       {/* Party assignment card — always visible */}
       <div className="order-1 rounded-2xl border border-cyan-500/20 bg-slate-900/50 shadow-xl">
-        <div className="flex items-center justify-between gap-4 border-b border-slate-800 px-6 py-4">
+        <div className="flex flex-col gap-3 border-b border-slate-800 px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6">
           <div className="min-w-0">
             <h3 className="text-sm font-semibold text-slate-100">
               Asignación
@@ -550,7 +550,7 @@ export const PartyBuilderPage: React.FC = () => {
           </button>
         </div>
 
-        <div className="p-6">
+        <div className="p-4 sm:p-6">
           {assignmentName === null ? (
             <p className="py-8 text-center text-sm text-slate-600">Ninguna composición seleccionada.</p>
           ) : isLoadingUsers ? (
@@ -562,7 +562,7 @@ export const PartyBuilderPage: React.FC = () => {
             <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_22rem]">
               <div className="space-y-3">
                 {/* Column headers */}
-                <div className="grid grid-cols-[10rem_1fr_1fr] gap-4 px-1">
+                <div className="hidden grid-cols-[10rem_minmax(0,1fr)_minmax(0,1fr)] gap-4 px-1 md:grid">
                   <p className="text-xs font-medium uppercase tracking-wider text-slate-500">Rol</p>
                   <p className="text-xs font-medium uppercase tracking-wider text-slate-500">Usuario</p>
                   <p className="text-xs font-medium uppercase tracking-wider text-slate-500">Personaje</p>
@@ -572,7 +572,10 @@ export const PartyBuilderPage: React.FC = () => {
                   const roleCharacters = allCharacters.filter((c) => isCharacterForRole(c, slot.role));
 
                   return (
-                    <div key={index} className="grid grid-cols-[10rem_1fr_1fr] items-center gap-4">
+                    <div
+                      key={index}
+                      className="grid gap-3 rounded-xl border border-slate-800 bg-slate-950/30 p-3 md:grid-cols-[10rem_minmax(0,1fr)_minmax(0,1fr)] md:items-center md:gap-4 md:border-0 md:bg-transparent md:p-0"
+                    >
                       {/* Role badge */}
                       <span
                         className={`inline-flex w-fit items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold ${slot.roleClassName}`}
@@ -581,21 +584,29 @@ export const PartyBuilderPage: React.FC = () => {
                       </span>
 
                       {/* User */}
-                      <select
-                        value={slot.userId}
-                        onChange={(e) => updateSlot(index, 'userId', e.target.value)}
-                        className={selectClassName}
-                      >
-                        <option value="">Selecciona un usuario</option>
-                        {users.map((u) => (
-                          <option key={u.id} value={u.id}>
-                            {u.userName}
-                          </option>
-                        ))}
-                      </select>
+                      <label className="block">
+                        <span className="mb-1 block text-[11px] font-medium uppercase tracking-wider text-slate-500 md:hidden">
+                          Usuario
+                        </span>
+                        <select
+                          value={slot.userId}
+                          onChange={(e) => updateSlot(index, 'userId', e.target.value)}
+                          className={selectClassName}
+                        >
+                          <option value="">Selecciona un usuario</option>
+                          {users.map((u) => (
+                            <option key={u.id} value={u.id}>
+                              {u.userName}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
 
                       {/* Character */}
                       <div className="relative">
+                        <span className="mb-1 block text-[11px] font-medium uppercase tracking-wider text-slate-500 md:hidden">
+                          Personaje
+                        </span>
                         <button
                           type="button"
                           onClick={() => setOpenCharacterSelectIndex((current) => (current === index ? null : index))}
@@ -745,14 +756,14 @@ export const PartyBuilderPage: React.FC = () => {
 
       {isCompositionConflictModalOpen && selectedEvent ? (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 px-4 backdrop-blur-sm"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 p-3 backdrop-blur-sm sm:p-4"
           onClick={(event) => {
             if (event.target === event.currentTarget && !isSavingAssignment) {
               setIsCompositionConflictModalOpen(false);
             }
           }}
         >
-          <div className="w-full max-w-lg rounded-2xl border border-slate-700 bg-slate-900 shadow-2xl">
+          <div className="flex max-h-[calc(100dvh-1.5rem)] w-full max-w-lg flex-col rounded-2xl border border-slate-700 bg-slate-900 shadow-2xl sm:max-h-[calc(100dvh-2rem)]">
             <div className="flex items-center justify-between border-b border-slate-800 px-6 py-4">
               <div>
                 <h3 className="text-sm font-semibold text-slate-100">Composición ya asignada</h3>
@@ -776,7 +787,7 @@ export const PartyBuilderPage: React.FC = () => {
               </button>
             </div>
 
-            <div className="space-y-4 p-6">
+            <div className="min-h-0 space-y-4 overflow-y-auto p-4 sm:p-6">
               <p className="text-sm text-slate-300">
                 ¿Quieres añadir esta composición como una extra o sobrescribir la composición existente del evento?
               </p>
@@ -814,8 +825,8 @@ export const PartyBuilderPage: React.FC = () => {
       ) : null}
 
       {isNewAssignmentModalOpen ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 px-4 backdrop-blur-sm">
-          <div className="w-full max-w-lg rounded-2xl border border-slate-700 bg-slate-900 shadow-2xl">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 p-3 backdrop-blur-sm sm:p-4">
+          <div className="flex max-h-[calc(100dvh-1.5rem)] w-full max-w-lg flex-col rounded-2xl border border-slate-700 bg-slate-900 shadow-2xl sm:max-h-[calc(100dvh-2rem)]">
             <div className="flex items-center justify-between border-b border-slate-800 px-6 py-4">
               <div>
                 <h3 className="text-sm font-semibold text-slate-100">Nueva asignación</h3>
@@ -836,7 +847,7 @@ export const PartyBuilderPage: React.FC = () => {
               </button>
             </div>
 
-            <div className="space-y-3 p-6">
+            <div className="min-h-0 space-y-3 overflow-y-auto p-4 sm:p-6">
               {newAssignmentError !== null ? (
                 <div className="rounded-xl border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm font-medium text-red-300">
                   {newAssignmentError}
@@ -886,7 +897,7 @@ export const PartyBuilderPage: React.FC = () => {
               ))}
             </div>
 
-            <div className="flex items-center justify-between gap-3 border-t border-slate-800 px-6 py-4">
+            <div className="flex flex-col gap-3 border-t border-slate-800 px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6">
               <p className="text-xs text-slate-500">
                 {totalNewAssignmentSlots} slot{totalNewAssignmentSlots !== 1 ? 's' : ''} seleccionado{totalNewAssignmentSlots !== 1 ? 's' : ''}
               </p>

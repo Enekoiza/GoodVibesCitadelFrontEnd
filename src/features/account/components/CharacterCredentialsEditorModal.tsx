@@ -54,10 +54,10 @@ export const CharacterCredentialsEditorModal: React.FC<CharacterCredentialsEdito
   return (
     <div
       onClick={handleBackdropClick}
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-3 backdrop-blur-sm sm:p-4"
     >
-      <div className="w-full max-w-md rounded-2xl border border-slate-700 bg-slate-900 shadow-2xl">
-        <div className="flex items-center justify-between border-b border-slate-800 px-6 py-4">
+      <div className="flex max-h-[calc(100dvh-1.5rem)] w-full max-w-md flex-col rounded-2xl border border-slate-700 bg-slate-900 shadow-2xl sm:max-h-[calc(100dvh-2rem)]">
+        <div className="flex items-center justify-between border-b border-slate-800 px-4 py-4 sm:px-6">
           <div>
             <h3 className="text-base font-semibold text-slate-100">Credenciales del personaje</h3>
             <p className="mt-0.5 text-sm text-cyan-400">{characterName}</p>
@@ -74,8 +74,8 @@ export const CharacterCredentialsEditorModal: React.FC<CharacterCredentialsEdito
           </button>
         </div>
 
-        <form onSubmit={handleSubmit}>
-          <div className="space-y-4 px-6 py-5">
+        <form onSubmit={handleSubmit} className="flex min-h-0 flex-1 flex-col">
+          <div className="min-h-0 space-y-4 overflow-y-auto px-4 py-5 sm:px-6">
             <label className="block">
               <span className="mb-2 block text-xs font-medium uppercase tracking-wider text-slate-500">
                 Login
@@ -123,7 +123,7 @@ export const CharacterCredentialsEditorModal: React.FC<CharacterCredentialsEdito
             ) : null}
           </div>
 
-          <div className="flex items-center justify-end gap-3 border-t border-slate-800 px-6 py-4">
+          <div className="flex flex-col-reverse gap-3 border-t border-slate-800 px-4 py-4 sm:flex-row sm:items-center sm:justify-end sm:px-6">
             <button
               type="button"
               onClick={onClose}

@@ -20,7 +20,7 @@ export const ConfirmDeleteModal: React.FC<ConfirmDeleteModalProps> = ({
   return (
     <div
       onClick={handleBackdropClick}
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-3 backdrop-blur-sm sm:p-4"
     >
       <div className="w-full max-w-sm rounded-2xl border border-slate-700 bg-slate-900 shadow-2xl">
         {/* Icon */}
@@ -39,7 +39,7 @@ export const ConfirmDeleteModal: React.FC<ConfirmDeleteModalProps> = ({
         </div>
 
         {/* Footer */}
-        <div className="flex items-center gap-3 border-t border-slate-800 px-6 py-4">
+        <div className="flex flex-col gap-3 border-t border-slate-800 px-4 py-4 sm:flex-row sm:items-center sm:px-6">
           <button
             onClick={onCancel}
             disabled={isDeleting}
