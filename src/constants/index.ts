@@ -1,11 +1,18 @@
 export const ADMIN_ROLES = ['CP Admin', 'Admin'];
 
+export const WAREHOUSE_EDIT_ROLES = ['CP Oficial', 'CP Admin', 'Admin'];
+
 /** Shown in the UI when the JWT has no role claims (user pending assignment in DB). */
 export const WAITING_ROLE = 'Waiting';
 
 /** True if the user has CP Admin or Admin (panel + rutas /admin). */
 export function hasAdminRole(roles: string[]): boolean {
   return roles.some((r) => ADMIN_ROLES.includes(r));
+}
+
+/** True if the user can edit the CP warehouse inventory. */
+export function hasWarehouseEditRole(roles: string[]): boolean {
+  return roles.some((r) => WAREHOUSE_EDIT_ROLES.includes(r));
 }
 
 /** True if the JWT includes at least one role (user is not in pending / Waiting state). */

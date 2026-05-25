@@ -14,6 +14,7 @@ import { MembersPage } from './features/members/pages/MembersPage';
 import { PartyBuilderPage } from './features/party-builder/pages/PartyBuilderPage';
 import { AccountSettingsPage } from './features/account/pages/AccountSettingsPage';
 import { RecipesPage } from './features/recipes/pages/RecipesPage';
+import { CpWarehousePage } from './features/cp-warehouse/pages/CpWarehousePage';
 
 function App() {
   return (
@@ -29,6 +30,7 @@ function App() {
               <Route path="/miembros" element={<AppLayout><MembersPage /></AppLayout>} />
               <Route path="/party-builder" element={<AppLayout><PartyBuilderPage /></AppLayout>} />
               <Route path="/recetas" element={<AppLayout><RecipesPage /></AppLayout>} />
+              <Route path="/cp-warehouse" element={<AppLayout><CpWarehousePage /></AppLayout>} />
             </Route>
             <Route element={<AccountSettingsRoute />}>
               <Route path="/cuenta" element={<AppLayout><AccountSettingsPage /></AppLayout>} />
