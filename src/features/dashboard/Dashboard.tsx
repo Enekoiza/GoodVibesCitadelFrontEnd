@@ -1,7 +1,7 @@
 import React from 'react';
 import { hasRegisteredRoles } from '../../constants';
 import { useAuth } from '../auth/context/AuthContext';
-import { PeopleListCard } from './components/PeopleListCard';
+import { MembersCard } from './components/MembersCard';
 import { UpcomingEventsCard } from './components/UpcomingEventsCard';
 
 export const Dashboard: React.FC = () => {
@@ -16,12 +16,12 @@ export const Dashboard: React.FC = () => {
       </header>
 
       {/* Main Content Area — events card solo ocupa el ancho del calendario */}
-      <div className="flex flex-col gap-6 lg:flex-row lg:items-start">
-        <div className="min-w-0 flex-1">
-          <PeopleListCard />
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-stretch">
+        <div className="flex min-h-[32rem] flex-col">
+          <MembersCard />
         </div>
         {showUpcomingEvents ? (
-          <div className="w-full shrink-0 lg:w-auto">
+          <div className="flex min-h-[32rem] flex-col">
             <UpcomingEventsCard />
           </div>
         ) : null}
