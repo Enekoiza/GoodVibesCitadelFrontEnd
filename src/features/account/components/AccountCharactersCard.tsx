@@ -152,8 +152,8 @@ export const AccountCharactersCard: React.FC = () => {
   };
 
   return (
-    <div className="rounded-2xl border border-slate-800 bg-slate-900/50 shadow-xl">
-      <div className="border-b border-slate-800 px-6 py-4">
+    <div className="rounded-2xl border border-citadel-accent/45 bg-slate-900/50 shadow-xl">
+      <div className="border-b border-citadel-accent/30 px-6 py-4">
         <h3 className="text-sm font-semibold text-slate-100">Mis personajes</h3>
         <p className="mt-0.5 text-xs text-slate-500">Personajes registrados a tu nombre en el clan.</p>
       </div>
@@ -170,7 +170,7 @@ export const AccountCharactersCard: React.FC = () => {
               <table className="w-full min-w-[52rem] text-sm">
                 <caption className="sr-only">Personajes del usuario</caption>
                 <thead>
-                  <tr className="border-b border-slate-800">
+                  <tr className="border-b border-citadel-accent/30">
                     <th scope="col" className="w-10 pb-3" />
                     <th
                       scope="col"
@@ -204,7 +204,7 @@ export const AccountCharactersCard: React.FC = () => {
                     </th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-800/60">
+                <tbody className="divide-y divide-citadel-accent/25">
                   {characters.length === 0 ? (
                     <tr>
                       <td colSpan={6} className="py-8 text-center text-sm italic text-slate-600">
@@ -302,7 +302,7 @@ export const AccountCharactersCard: React.FC = () => {
               </table>
             </div>
 
-            <form onSubmit={handleRegister} className="mt-6 border-t border-slate-800 pt-6">
+            <form onSubmit={handleRegister} className="mt-6 border-t border-citadel-accent/30 pt-6">
               <p className="mb-3 text-xs font-medium uppercase tracking-wider text-slate-500">
                 Registrar personaje
               </p>

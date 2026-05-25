@@ -69,9 +69,9 @@ export const UsersCard: React.FC = () => {
 
   return (
     <>
-      <div className="rounded-2xl border border-slate-800 bg-slate-900/50 shadow-xl">
+      <div className="rounded-2xl border border-citadel-accent/45 bg-slate-900/50 shadow-xl">
         {/* Card header */}
-        <div className="flex items-center justify-between border-b border-slate-800 px-6 py-4">
+        <div className="flex items-center justify-between border-b border-citadel-accent/30 px-6 py-4">
           <div className="flex items-center gap-3">
             <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-cyan-500/10">
               <svg className="h-5 w-5 text-cyan-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -150,14 +150,14 @@ export const UsersCard: React.FC = () => {
               )}
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="border-b border-slate-800">
+                  <tr className="border-b border-citadel-accent/30">
                     <th className="pb-3 text-left text-xs font-medium uppercase tracking-wider text-slate-500">Usuario</th>
                     <th className="pb-3 text-left text-xs font-medium uppercase tracking-wider text-slate-500">Roles</th>
                     <th className="pb-3 text-left text-xs font-medium uppercase tracking-wider text-slate-500">Personajes</th>
                     <th className="pb-3 text-right text-xs font-medium uppercase tracking-wider text-slate-500">Acciones</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-800/60">
+                <tbody className="divide-y divide-citadel-accent/25">
                   {users.map((user) => (
                     <tr
                       key={user.id}

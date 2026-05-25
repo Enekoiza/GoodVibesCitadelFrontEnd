@@ -60,9 +60,9 @@ export const RolesManagementPage: React.FC = () => {
         </header>
 
         {/* Roles card */}
-        <div className="rounded-2xl border border-slate-800 bg-slate-900/50 shadow-xl">
+        <div className="rounded-2xl border border-citadel-accent/45 bg-slate-900/50 shadow-xl">
           {/* Card header */}
-          <div className="flex items-center justify-between border-b border-slate-800 px-6 py-4">
+          <div className="flex items-center justify-between border-b border-citadel-accent/30 px-6 py-4">
             <div className="flex items-center gap-3">
               <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-orange-500/10">
                 <svg className="h-5 w-5 text-orange-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -143,7 +143,7 @@ export const RolesManagementPage: React.FC = () => {
           </div>
 
           {/* Card footer */}
-          <div className="flex justify-start border-t border-slate-800 px-6 py-4">
+          <div className="flex justify-start border-t border-citadel-accent/30 px-6 py-4">
             <button
               onClick={() => setShowCreateModal(true)}
               className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-orange-500 to-orange-600 px-4 py-2 text-sm font-medium text-white shadow transition-all hover:from-orange-400 hover:to-orange-500"

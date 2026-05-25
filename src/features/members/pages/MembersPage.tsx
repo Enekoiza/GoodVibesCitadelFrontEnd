@@ -45,8 +45,8 @@ export const MembersPage: React.FC = () => {
         <p className="text-slate-400">Personas registradas en Good Vibes Citadel.</p>
       </header>
 
-      <div className="rounded-2xl border border-slate-800 bg-slate-900/50 shadow-xl">
-        <div className="flex items-center justify-between border-b border-slate-800 px-6 py-4">
+      <div className="rounded-2xl border border-citadel-accent/45 bg-slate-900/50 shadow-xl">
+        <div className="flex items-center justify-between border-b border-citadel-accent/30 px-6 py-4">
           <div className="flex min-w-0 flex-1 items-center gap-3">
             <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-cyan-500/10">
               {membersIcon}
@@ -120,7 +120,7 @@ export const MembersPage: React.FC = () => {
               <table className="w-full text-sm">
                 <caption className="sr-only">Miembros</caption>
                 <thead>
-                  <tr className="border-b border-slate-800">
+                  <tr className="border-b border-citadel-accent/30">
                     <th scope="col" className="pb-3 text-left text-xs font-medium uppercase tracking-wider text-slate-500">
                       Usuario
                     </th>
@@ -129,7 +129,7 @@ export const MembersPage: React.FC = () => {
                     </th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-800/60">
+                <tbody className="divide-y divide-citadel-accent/25">
                   {members.map((user) => (
                     <tr key={user.id} className="transition-colors hover:bg-slate-800/40">
                       <td className="py-3 pr-4">

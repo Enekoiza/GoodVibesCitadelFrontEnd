@@ -11,12 +11,14 @@ interface EventDropsEditorProps {
   eventId: string;
   initialDrops: EventDrop[];
   onSaved: (drops: EventDrop[]) => void;
+  onClose?: () => void;
 }
 
 export const EventDropsEditor: React.FC<EventDropsEditorProps> = ({
   eventId,
   initialDrops,
   onSaved,
+  onClose,
 }) => {
   const { token, logout } = useAuth();
   const [jsonText, setJsonText] = useState(() => formatDropsJson(initialDrops));
@@ -50,6 +52,7 @@ export const EventDropsEditor: React.FC<EventDropsEditorProps> = ({
         })),
       });
       onSaved(result.drops);
+      onClose?.();
     } catch (err: unknown) {
       setSaveError(err instanceof Error ? err.message : 'No se pudieron guardar los drops.');
     } finally {
@@ -58,10 +61,9 @@ export const EventDropsEditor: React.FC<EventDropsEditorProps> = ({
   };
 
   return (
-    <section className="space-y-4">
+    <section className="space-y-4 border-t border-citadel-accent/30 pt-6">
       <div>
-        <h4 className="text-sm font-semibold text-slate-200">Editar drops</h4>
-        <p className="mt-1 text-xs text-slate-500">
+        <p className="text-xs text-slate-500">
           Pega un JSON con la lista de materiales y sus cantidades. Ejemplo:{' '}
           <code className="text-slate-400">[{'{ "name": "Avadon Robe Fabric", "quantity": 5 }'}]</code>
         </p>

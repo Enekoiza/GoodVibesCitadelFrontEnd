@@ -6,6 +6,8 @@
   --color-dark-border: #334155; /* Slate 700 */
   --color-accent-start: #3b82f6; /* Blue 500 */
   --color-accent-end: #8b5cf6; /* Violet 500 */
+  /* Final tone of "Good Vibes Citadel" gradient — the "L" in Citadel */
+  --color-citadel-accent: #f97316; /* orange-500 */
 }
 
 @layer base {

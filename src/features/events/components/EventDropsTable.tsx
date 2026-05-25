@@ -87,14 +87,12 @@ export const EventDropsTable: React.FC<EventDropsTableProps> = ({ drops }) => {
   }
 
   return (
-    <section className="space-y-3">
-      <h4 className="text-sm font-semibold text-slate-200">Drops</h4>
-
+    <div className="space-y-3">
       {error ? (
         <p className="text-xs text-amber-400">{error}</p>
       ) : null}
 
-      <div className="overflow-hidden rounded-xl border border-slate-700/70 bg-slate-950/60">
+      <div className="overflow-hidden rounded-xl border border-citadel-accent/40 bg-slate-950/60">
         <table className="w-full text-xs">
           <caption className="sr-only">Drops del evento</caption>
           <thead className="bg-slate-900/80 text-slate-500">
@@ -107,7 +105,7 @@ export const EventDropsTable: React.FC<EventDropsTableProps> = ({ drops }) => {
               </th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-slate-800/80">
+          <tbody className="divide-y divide-citadel-accent/25">
             {drops.map((drop, index) => (
               <tr key={`${drop.name}-${index}`}>
                 <td className="px-3 py-2">
@@ -133,6 +131,6 @@ export const EventDropsTable: React.FC<EventDropsTableProps> = ({ drops }) => {
           </tbody>
         </table>
       </div>
-    </section>
+    </div>
   );
 };

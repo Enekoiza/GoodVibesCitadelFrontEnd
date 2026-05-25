@@ -12,7 +12,7 @@ interface PartyAssignmentPreviewTableProps {
 }
 
 export const PartyAssignmentPreviewTable: React.FC<PartyAssignmentPreviewTableProps> = ({ rows }) => (
-  <div className="overflow-hidden rounded-xl border border-slate-700/70 bg-slate-950/60">
+  <div className="overflow-hidden rounded-xl border border-citadel-accent/40 bg-slate-950/60">
     <table className="w-full text-xs">
       <caption className="sr-only">Composición de party</caption>
       <thead className="bg-slate-900/80 text-slate-500">
@@ -28,7 +28,7 @@ export const PartyAssignmentPreviewTable: React.FC<PartyAssignmentPreviewTablePr
           </th>
         </tr>
       </thead>
-      <tbody className="divide-y divide-slate-800/80">
+      <tbody className="divide-y divide-citadel-accent/25">
         {rows.map((row, index) => (
           <tr key={`${row.role}-${row.userName}-${row.characterName}-${index}`}>
             <td className="px-3 py-2">

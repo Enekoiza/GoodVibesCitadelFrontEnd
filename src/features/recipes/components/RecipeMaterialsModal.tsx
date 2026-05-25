@@ -38,7 +38,7 @@ const MaterialRow = ({ material, depth }: { material: RecetaMaterial; depth: num
   const hasHijos = material.hijos.length > 0;
 
   const rowClassName =
-    'flex w-full items-center gap-3 rounded-lg border border-slate-800/80 bg-slate-950/40 px-3 py-2.5';
+    'flex w-full items-center gap-3 rounded-lg border border-citadel-accent/35 bg-slate-950/40 px-3 py-2.5';
 
   const content = (
     <>
@@ -106,7 +106,7 @@ const CraftedItemsGallery = ({ items }: { items: RecetaDetail['items'] }) => {
           <figure
             key={item.id}
             title={item.nombre}
-            className="flex w-16 flex-col items-center gap-1 rounded-lg border border-slate-800 bg-slate-950/70 p-1.5"
+            className="flex w-16 flex-col items-center gap-1 rounded-lg border border-citadel-accent/35 bg-slate-950/70 p-1.5"
           >
             {item.imagenUrl ? (
               <img
@@ -155,12 +155,12 @@ export const RecipeMaterialsModal: React.FC<RecipeMaterialsModalProps> = ({
     }}
   >
     <div
-      className="relative flex max-h-[calc(100dvh-1.5rem)] w-full max-w-3xl flex-col rounded-2xl border border-slate-700 bg-slate-900 shadow-2xl sm:max-h-[min(90dvh,720px)]"
+      className="relative flex max-h-[calc(100dvh-1.5rem)] w-full max-w-3xl flex-col rounded-2xl border border-citadel-accent/45 bg-slate-900 shadow-2xl sm:max-h-[min(90dvh,720px)]"
       role="dialog"
       aria-modal="true"
       aria-labelledby="recipe-materials-title"
     >
-      <div className="flex flex-col gap-4 border-b border-slate-800 px-4 py-4 sm:flex-row sm:items-start sm:justify-between sm:px-6">
+      <div className="flex flex-col gap-4 border-b border-citadel-accent/30 px-4 py-4 sm:flex-row sm:items-start sm:justify-between sm:px-6">
         <div className="flex min-w-0 flex-1 items-start gap-3">
           {receta.imagenUrl ? (
             <img
@@ -224,7 +224,7 @@ export const RecipeMaterialsModal: React.FC<RecipeMaterialsModalProps> = ({
       </div>
 
       {receta.url ? (
-        <div className="border-t border-slate-800 px-6 py-4">
+        <div className="border-t border-citadel-accent/30 px-6 py-4">
           <a
             href={receta.url}
             target="_blank"

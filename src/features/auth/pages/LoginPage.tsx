@@ -120,8 +120,8 @@ const TemporaryPasswordModal: React.FC<TemporaryPasswordModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-3 backdrop-blur-sm sm:p-4">
-      <div className="flex max-h-[calc(100dvh-1.5rem)] w-full max-w-md flex-col rounded-2xl border border-slate-700 bg-slate-900 shadow-2xl sm:max-h-[calc(100dvh-2rem)]">
-        <div className="border-b border-slate-800 px-4 py-4 sm:px-6">
+      <div className="flex max-h-[calc(100dvh-1.5rem)] w-full max-w-md flex-col rounded-2xl border border-citadel-accent/45 bg-slate-900 shadow-2xl sm:max-h-[calc(100dvh-2rem)]">
+        <div className="border-b border-citadel-accent/30 px-4 py-4 sm:px-6">
           <h3 className="text-base font-semibold text-slate-100">Actualizar contraseña</h3>
           <p className="mt-0.5 text-sm text-slate-500">
             Actualiza tu contraseña temporal para continuar.
@@ -156,7 +156,7 @@ const TemporaryPasswordModal: React.FC<TemporaryPasswordModalProps> = ({
             )}
           </div>
 
-          <div className="flex items-center justify-end border-t border-slate-800 px-4 py-4 sm:px-6">
+          <div className="flex items-center justify-end border-t border-citadel-accent/30 px-4 py-4 sm:px-6">
             <button
               type="submit"
               disabled={isSaving || !oldPassword || !repeatedOldPassword || !newPassword}
@@ -225,7 +225,7 @@ export const LoginPage: React.FC = () => {
 
   return (
     <div className="flex min-h-screen w-full items-center justify-center bg-slate-950 px-4 font-sans text-slate-100">
-      <div className="w-full max-w-md rounded-2xl border border-slate-800 bg-slate-900/50 p-6 shadow-2xl backdrop-blur-xl sm:p-8">
+      <div className="w-full max-w-md rounded-2xl border border-citadel-accent/45 bg-slate-900/50 p-6 shadow-2xl backdrop-blur-xl sm:p-8">
         <div className="mb-8 flex flex-col items-center text-center">
           <img src={logoUrl} alt="Good Vibes Citadel Logo" className="mb-4 h-20 w-auto" />
           <h1 className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-cyan-400 to-orange-500">

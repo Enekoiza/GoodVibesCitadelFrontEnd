@@ -73,8 +73,8 @@ export const RegisterUserModal: React.FC<RegisterUserModalProps> = ({ onClose, o
       onClick={handleBackdropClick}
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-3 backdrop-blur-sm sm:p-4"
     >
-      <div className="flex max-h-[calc(100dvh-1.5rem)] w-full max-w-md flex-col rounded-2xl border border-slate-700 bg-slate-900 shadow-2xl sm:max-h-[calc(100dvh-2rem)]">
-        <div className="flex items-center justify-between border-b border-slate-800 px-4 py-4 sm:px-6">
+      <div className="flex max-h-[calc(100dvh-1.5rem)] w-full max-w-md flex-col rounded-2xl border border-citadel-accent/45 bg-slate-900 shadow-2xl sm:max-h-[calc(100dvh-2rem)]">
+        <div className="flex items-center justify-between border-b border-citadel-accent/30 px-4 py-4 sm:px-6">
           <div>
             <h3 className="text-base font-semibold text-slate-100">Registrar usuario</h3>
             <p className="mt-0.5 text-sm text-slate-500">Crea un nuevo usuario y copia su contraseña inicial.</p>
@@ -134,7 +134,7 @@ export const RegisterUserModal: React.FC<RegisterUserModalProps> = ({ onClose, o
           )}
         </div>
 
-        <div className="flex flex-col-reverse gap-3 border-t border-slate-800 px-4 py-4 sm:flex-row sm:items-center sm:justify-end sm:px-6">
+        <div className="flex flex-col-reverse gap-3 border-t border-citadel-accent/30 px-4 py-4 sm:flex-row sm:items-center sm:justify-end sm:px-6">
           <button
             onClick={onClose}
             className="rounded-xl px-4 py-2 text-sm font-medium text-slate-400 transition-colors hover:bg-slate-800 hover:text-slate-200"
