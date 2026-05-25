@@ -7,6 +7,7 @@ import { hasRegisteredRoles } from '../../../constants';
 import { useAuth } from '../../auth/context/AuthContext';
 import { fetchAllEvents, getEventTypeBadge } from '../../events/api/eventsApi';
 import type { EventItem } from '../../events/api/eventsApi';
+import { EventDetailModal } from '../../events/components/EventDetailModal';
 
 const WEEK_DAYS = ['L', 'M', 'X', 'J', 'V', 'S', 'D'];
 
@@ -46,10 +47,12 @@ export const UpcomingEventsCard: React.FC = () => {
   const canViewEventsPage = hasRegisteredRoles(roles);
   const [events, setEvents] = useState<EventItem[]>([]);
   const [openedDay, setOpenedDay] = useState<string | null>(null);
+  const [selectedEvent, setSelectedEvent] = useState<EventItem | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   const currentMonth = useMemo(() => new Date(), []);
+  const todayKey = useMemo(() => toDayKey(new Date()), []);
   const days = useMemo(() => buildMonthDays(currentMonth), [currentMonth]);
 
   const fetchEvents = useCallback(async () => {
@@ -87,28 +90,23 @@ export const UpcomingEventsCard: React.FC = () => {
   return (
     <>
       <div
-        className={`w-fit max-w-full ${canViewEventsPage ? 'cursor-pointer' : ''}`}
+        className={`flex h-full w-full max-w-full flex-col ${canViewEventsPage ? 'cursor-pointer' : ''}`}
         onClick={() => {
           if (canViewEventsPage) navigate('/eventos');
         }}
       >
-        <Card title="Futuros eventos" className="w-full">
+        <Card title="Futuros eventos" className="h-full w-full">
           {isLoading ? (
-            <div onClick={(e) => e.stopPropagation()}>
+            <div className="flex h-full items-center justify-center" onClick={(e) => e.stopPropagation()}>
               <Loader />
             </div>
           ) : error ? (
-            <div onClick={(e) => e.stopPropagation()}>
+            <div className="flex h-full items-center justify-center" onClick={(e) => e.stopPropagation()}>
               <ErrorMessage message={error} onRetry={fetchEvents} />
             </div>
           ) : (
-            <div className="flex flex-col">
-              <div className="mb-4 flex items-center justify-between gap-2">
-                <p className="text-sm font-medium capitalize text-slate-300">{monthLabel}</p>
-                <span className="shrink-0 rounded-full border border-cyan-500/20 bg-cyan-500/10 px-3 py-1 text-xs font-semibold text-cyan-300">
-                  {Object.keys(eventsByDay).length} día{Object.keys(eventsByDay).length !== 1 ? 's' : ''} con eventos
-                </span>
-              </div>
+            <div className="flex h-full flex-col">
+              <p className="mb-4 text-sm font-medium capitalize text-slate-300">{monthLabel}</p>
 
               <div className="overflow-x-auto" onClick={(e) => e.stopPropagation()}>
                 <div className="inline-grid min-w-full grid-cols-7 gap-1 text-center sm:w-max sm:min-w-0 sm:gap-2">
@@ -129,6 +127,15 @@ export const UpcomingEventsCard: React.FC = () => {
                   const dayKey = toDayKey(day);
                   const dayEvents = eventsByDay[dayKey] ?? [];
                   const hasEvents = dayEvents.length > 0;
+                  const isToday = dayKey === todayKey;
+
+                  const dayClassName = isToday
+                    ? hasEvents
+                      ? 'cursor-pointer border-cyan-400/50 bg-cyan-500/15 text-cyan-100 ring-1 ring-cyan-400/40 hover:border-cyan-300/70 hover:bg-cyan-500/25'
+                      : 'cursor-default border-cyan-400/50 bg-cyan-500/15 text-cyan-200 ring-1 ring-cyan-400/30'
+                    : hasEvents
+                      ? 'cursor-pointer border-orange-400/40 bg-orange-500/15 text-orange-200 hover:border-orange-300/70 hover:bg-orange-500/25'
+                      : 'cursor-default border-citadel-accent/30 bg-slate-900/70 text-slate-500';
 
                   return (
                     <button
@@ -137,17 +144,15 @@ export const UpcomingEventsCard: React.FC = () => {
                       onClick={() => {
                         if (hasEvents) setOpenedDay(dayKey);
                       }}
-                      className={`relative flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border text-sm font-semibold transition-all sm:h-10 sm:w-10 ${
-                        hasEvents
-                          ? 'border-orange-400/40 bg-orange-500/15 text-orange-200 hover:border-orange-300/70 hover:bg-orange-500/25'
-                          : 'cursor-default border-slate-800 bg-slate-900/70 text-slate-500'
-                      }`}
-                      aria-label={`${day.getDate()} de ${monthLabel}${hasEvents ? `, ${dayEvents.length} eventos` : ', sin eventos'}`}
+                      className={`relative flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border text-sm font-semibold transition-all sm:h-10 sm:w-10 ${dayClassName}`}
+                      aria-label={`${day.getDate()} de ${monthLabel}${isToday ? ', hoy' : ''}${hasEvents ? `, ${dayEvents.length} eventos` : ', sin eventos'}`}
                     >
                       {day.getDate()}
-                      {hasEvents && (
-                        <span className="absolute bottom-1 h-1.5 w-1.5 rounded-full bg-orange-300" />
-                      )}
+                      {hasEvents ? (
+                        <span
+                          className={`absolute bottom-1 h-1.5 w-1.5 rounded-full ${isToday ? 'bg-cyan-300' : 'bg-orange-300'}`}
+                        />
+                      ) : null}
                     </button>
                   );
                 })}
@@ -165,8 +170,8 @@ export const UpcomingEventsCard: React.FC = () => {
             if (event.target === event.currentTarget) setOpenedDay(null);
           }}
         >
-          <div className="flex max-h-[calc(100dvh-1.5rem)] w-full max-w-lg flex-col rounded-2xl border border-slate-700 bg-slate-900 shadow-2xl sm:max-h-[calc(100dvh-2rem)]">
-            <div className="flex items-start justify-between gap-4 border-b border-slate-800 px-4 py-4 sm:px-6">
+          <div className="flex max-h-[calc(100dvh-1.5rem)] w-full max-w-lg flex-col rounded-2xl border border-citadel-accent/45 bg-slate-900 shadow-2xl sm:max-h-[calc(100dvh-2rem)]">
+            <div className="flex items-start justify-between gap-4 border-b border-citadel-accent/30 px-4 py-4 sm:px-6">
               <div>
                 <h3 className="text-base font-semibold text-slate-100">Eventos del día</h3>
                 <p className="mt-1 text-sm capitalize text-slate-500">
@@ -191,9 +196,11 @@ export const UpcomingEventsCard: React.FC = () => {
 
             <div className="min-h-0 space-y-3 overflow-y-auto p-4 custom-scrollbar sm:p-6">
               {openedEvents.map((event, index) => (
-                <article
+                <button
                   key={event.eventId || `${event.eventTime}-${event.eventName}-${index}`}
-                  className="rounded-xl border border-slate-800 bg-slate-800/45 p-4"
+                  type="button"
+                  onClick={() => setSelectedEvent(event)}
+                  className="w-full rounded-xl border border-citadel-accent/40 bg-slate-800/45 p-4 text-left transition-colors hover:border-citadel-accent/60 hover:bg-slate-800/70 focus:outline-none focus:ring-2 focus:ring-citadel-accent/30"
                 >
                   <div className="mb-3 flex items-center justify-between gap-3">
                     <h4 className="text-sm font-semibold text-slate-100">{event.eventName}</h4>
@@ -207,12 +214,20 @@ export const UpcomingEventsCard: React.FC = () => {
                     </span>
                     <span className="text-xs text-slate-400">Creado por {event.username}</span>
                   </div>
-                </article>
+                </button>
               ))}
             </div>
           </div>
         </div>
       )}
+
+      {selectedEvent ? (
+        <EventDetailModal
+          event={selectedEvent}
+          onClose={() => setSelectedEvent(null)}
+          className="z-[60]"
+        />
+      ) : null}
     </>
   );
 };

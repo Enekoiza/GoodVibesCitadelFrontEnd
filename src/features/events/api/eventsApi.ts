@@ -121,6 +121,29 @@ export const EVENT_TYPES = [
   'Raid boss regroup',
 ] as const;
 
+export const BORROWED_CREDENTIAL_EVENT_TYPES = new Set<string>([
+  'Asedio',
+  'Raid boss epico',
+  'Raid boss regroup',
+]);
+
+export const eventTypeShowsBorrowedCredentials = (eventType: string) =>
+  BORROWED_CREDENTIAL_EVENT_TYPES.has(eventType);
+
+export type BorrowedCredentialsVisibility = 'none' | 'scheduled' | 'available' | 'expired';
+
+export interface BorrowedCharacterCredentials {
+  characterName: string;
+  ownerUsername: string;
+  login: string;
+  hasPassword: boolean;
+}
+
+export interface BorrowedCharacterCredentialsResponse {
+  visibility: BorrowedCredentialsVisibility;
+  characters: BorrowedCharacterCredentials[];
+}
+
 export const EVENT_TYPE_STYLE: Record<string, string> = {
   'Asedio': 'bg-red-500/15 text-red-400 border-red-500/20',
   'Evento de farmeo': 'bg-emerald-500/15 text-emerald-400 border-emerald-500/20',
@@ -308,4 +331,98 @@ export const updateEventDrops = async (
   });
 
   if (!response.ok) throw new Error(`Error ${response.status}: No se pudieron guardar los drops del evento.`);
+};
+
+type RawBorrowedCharacterCredentials = {
+  characterName?: string;
+  CharacterName?: string;
+  ownerUsername?: string;
+  OwnerUsername?: string;
+  login?: string;
+  Login?: string;
+  hasPassword?: boolean;
+  HasPassword?: boolean;
+};
+
+const normalizeBorrowedCharacterCredentials = (
+  raw: RawBorrowedCharacterCredentials
+): BorrowedCharacterCredentials => ({
+  characterName: String(raw.characterName ?? raw.CharacterName ?? ''),
+  ownerUsername: String(raw.ownerUsername ?? raw.OwnerUsername ?? ''),
+  login: String(raw.login ?? raw.Login ?? '').trim(),
+  hasPassword: Boolean(raw.hasPassword ?? raw.HasPassword),
+});
+
+const normalizeBorrowedCredentialsVisibility = (value: unknown): BorrowedCredentialsVisibility => {
+  if (value === 'scheduled' || value === 'available' || value === 'expired') {
+    return value;
+  }
+  return 'none';
+};
+
+type RawBorrowedCharacterCredentialsResponse = {
+  visibility?: string;
+  Visibility?: string;
+  characters?: RawBorrowedCharacterCredentials[];
+  Characters?: RawBorrowedCharacterCredentials[];
+};
+
+const normalizeBorrowedCharacterCredentialsResponse = (
+  raw: RawBorrowedCharacterCredentialsResponse
+): BorrowedCharacterCredentialsResponse => {
+  const characters = raw.characters ?? raw.Characters;
+  return {
+    visibility: normalizeBorrowedCredentialsVisibility(raw.visibility ?? raw.Visibility),
+    characters: Array.isArray(characters) ? characters.map(normalizeBorrowedCharacterCredentials) : [],
+  };
+};
+
+export const fetchBorrowedCharacterCredentials = async (
+  eventId: string,
+  token: string | null,
+  logout: () => void
+): Promise<BorrowedCharacterCredentialsResponse> => {
+  const response = await authenticatedFetch(
+    `/api/event/${encodeURIComponent(eventId)}/borrowed-characters`,
+    token,
+    logout
+  );
+
+  if (!response.ok) {
+    throw new Error(`Error ${response.status}: No se pudieron cargar las credenciales del personaje.`);
+  }
+
+  const data = (await response.json()) as RawBorrowedCharacterCredentialsResponse | RawBorrowedCharacterCredentials[];
+  if (Array.isArray(data)) {
+    return {
+      visibility: data.length > 0 ? 'available' : 'none',
+      characters: data.map(normalizeBorrowedCharacterCredentials),
+    };
+  }
+
+  return normalizeBorrowedCharacterCredentialsResponse(data);
+};
+
+export const fetchBorrowedCharacterPassword = async (
+  eventId: string,
+  characterName: string,
+  token: string | null,
+  logout: () => void
+): Promise<string> => {
+  const response = await authenticatedFetch(
+    `/api/event/${encodeURIComponent(eventId)}/borrowed-characters/${encodeURIComponent(characterName)}/password`,
+    token,
+    logout
+  );
+
+  if (response.status === 409) {
+    throw new Error('La contraseña no se puede mostrar. Pide al dueño que la actualice en sus credenciales.');
+  }
+
+  if (!response.ok) {
+    throw new Error(`Error ${response.status}: No se pudo obtener la contraseña.`);
+  }
+
+  const data = (await response.json()) as { password?: string; Password?: string };
+  return data.password ?? data.Password ?? '';
 };

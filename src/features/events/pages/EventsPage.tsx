@@ -1,19 +1,15 @@
 import React, { memo, useState, useEffect, useCallback, useMemo } from 'react';
 import { useAuth } from '../../auth/context/AuthContext';
 import { PARTY_TYPES } from '../../party-builder/api/partyBuilderApi';
-import { PartyAssignmentPreviewTable } from '../../party-builder/components/PartyAssignmentPreviewTable';
 import {
   fetchAllEvents,
-  getEventPartyPreviewRows,
   getEventTypeBadge,
   getPartyCompositionBadge,
   getPartyCompositionLabel,
-  hasPartyComposition,
 } from '../api/eventsApi';
 import type { EventItem } from '../api/eventsApi';
 import { CreateEventModal } from '../components/CreateEventModal';
-import { EventDropsEditor } from '../components/EventDropsEditor';
-import { EventDropsTable } from '../components/EventDropsTable';
+import { EventDetailModal } from '../components/EventDetailModal';
 
 const EVENT_DATE_FORMATTER = new Intl.DateTimeFormat('es-ES', {
   day: '2-digit',
@@ -59,11 +55,13 @@ const getEventKey = (event: EventItem) =>
 const getEventsErrorMessage = (err: unknown) =>
   err instanceof Error ? err.message : 'Error desconocido al cargar los eventos.';
 
-const closeIcon = (
-  <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden>
-    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-  </svg>
-);
+const ONE_WEEK_MS = 7 * 24 * 60 * 60 * 1000;
+
+const isEventOlderThanOneWeek = (eventTime: string): boolean => {
+  const eventDate = new Date(eventTime);
+  if (Number.isNaN(eventDate.getTime())) return false;
+  return Date.now() - eventDate.getTime() > ONE_WEEK_MS;
+};
 
 const EventsTable = memo(function EventsTable({
   events,
@@ -75,7 +73,7 @@ const EventsTable = memo(function EventsTable({
   return (
     <table className="w-full text-sm">
       <thead>
-        <tr className="border-b border-slate-800">
+        <tr className="border-b border-citadel-accent/30">
           <th scope="col" className="hidden">
             ID
           </th>
@@ -86,17 +84,20 @@ const EventsTable = memo(function EventsTable({
           <th className="pb-3 text-left text-xs font-medium uppercase tracking-wider text-slate-500">Creado por</th>
         </tr>
       </thead>
-      <tbody className="divide-y divide-slate-800/60">
-        {events.map((event) => (
+      <tbody className="divide-y divide-citadel-accent/25">
+        {events.map((event) => {
+          const isStale = isEventOlderThanOneWeek(event.eventTime);
+
+          return (
           <tr
             key={getEventKey(event)}
             onClick={() => onEventClick(event)}
-            className="cursor-pointer transition-colors hover:bg-slate-800/40"
+            className={`cursor-pointer transition-colors hover:bg-slate-800/40 ${isStale ? 'opacity-50' : ''}`}
           >
             <td className="hidden" data-event-id={event.eventId}>
               {event.eventId}
             </td>
-            <td className="py-3 pr-4 font-medium text-slate-200">{event.eventName}</td>
+            <td className={`py-3 pr-4 font-medium ${isStale ? 'text-slate-500' : 'text-slate-200'}`}>{event.eventName}</td>
             <td className="py-3 pr-4">
               <span
                 className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold ${getEventTypeBadge(event.eventType)}`}
@@ -114,7 +115,8 @@ const EventsTable = memo(function EventsTable({
             </td>
             <td className="py-3 text-slate-400">{event.username}</td>
           </tr>
-        ))}
+          );
+        })}
       </tbody>
     </table>
   );
@@ -169,6 +171,14 @@ export const EventsPage: React.FC = () => {
     return events.filter((e) => e.eventType === typeFilter);
   }, [events, typeFilter]);
 
+  const handleSelectEvent = useCallback((event: EventItem) => {
+    setSelectedEvent(event);
+  }, []);
+
+  const handleCloseEventModal = useCallback(() => {
+    setSelectedEvent(null);
+  }, []);
+
   const handleEventDropsSaved = useCallback((eventId: string, drops: EventItem['drops']) => {
     setEvents((current) =>
       current.map((event) => (event.eventId === eventId ? { ...event, drops } : event))
@@ -186,9 +196,9 @@ export const EventsPage: React.FC = () => {
           <p className="text-slate-400">Calendario y actividades del clan.</p>
         </header>
 
-        <div className="rounded-2xl border border-slate-800 bg-slate-900/50 shadow-xl">
+        <div className="rounded-2xl border border-citadel-accent/45 bg-slate-900/50 shadow-xl">
           {/* Table header */}
-          <div className="flex items-center justify-between gap-4 border-b border-slate-800 px-6 py-4">
+          <div className="flex items-center justify-between gap-4 border-b border-citadel-accent/30 px-6 py-4">
             <div className="flex min-w-0 flex-1 items-center gap-3">
               <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-cyan-500/10">
                 {calendarIcon}
@@ -279,7 +289,7 @@ export const EventsPage: React.FC = () => {
                       : 'No hay eventos registrados todavía.'}
                   </p>
                 ) : (
-                  <EventsTable events={filteredEvents} onEventClick={setSelectedEvent} />
+                  <EventsTable events={filteredEvents} onEventClick={handleSelectEvent} />
                 )}
               </div>
             )}
@@ -288,56 +298,13 @@ export const EventsPage: React.FC = () => {
       </div>
 
       {selectedEvent ? (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-3 backdrop-blur-sm sm:p-4"
-          onClick={(event) => {
-            if (event.target === event.currentTarget) setSelectedEvent(null);
-          }}
-        >
-          <div className="flex max-h-[calc(100dvh-1.5rem)] w-full max-w-lg flex-col rounded-2xl border border-slate-700 bg-slate-900 shadow-2xl sm:max-h-[calc(100dvh-2rem)]">
-            <div className="flex items-start justify-between gap-4 border-b border-slate-800 px-4 py-4 sm:px-6">
-              <div className="min-w-0">
-                <h3 className="text-base font-semibold text-slate-100">{selectedEvent.eventName}</h3>
-                <p className="mt-1 text-sm text-slate-500">
-                  {selectedEvent.eventType} · {formatDateTime(selectedEvent.eventTime)}
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={() => setSelectedEvent(null)}
-                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-slate-500 transition-colors hover:bg-slate-800 hover:text-slate-300"
-                aria-label="Cerrar modal"
-              >
-                {closeIcon}
-              </button>
-            </div>
-
-            <div className="min-h-0 space-y-6 overflow-y-auto p-4 sm:p-6">
-              <section className="space-y-3">
-                <h4 className="text-sm font-semibold text-slate-200">Composición de party</h4>
-                {hasPartyComposition(selectedEvent.partyCompositions) ? (
-                  <PartyAssignmentPreviewTable rows={getEventPartyPreviewRows(selectedEvent)} />
-                ) : (
-                  <p className="py-2 text-center text-sm text-slate-400">
-                    Este evento no tiene ninguna composicion asignada.
-                  </p>
-                )}
-              </section>
-
-              {selectedEvent.drops.length > 0 ? (
-                <EventDropsTable drops={selectedEvent.drops} />
-              ) : null}
-
-              <div className="border-t border-slate-800 pt-6">
-                <EventDropsEditor
-                  eventId={selectedEvent.eventId}
-                  initialDrops={selectedEvent.drops}
-                  onSaved={(drops) => handleEventDropsSaved(selectedEvent.eventId, drops)}
-                />
-              </div>
-            </div>
-          </div>
-        </div>
+        <EventDetailModal
+          event={selectedEvent}
+          onClose={handleCloseEventModal}
+          canEditDrops
+          showBorrowedCharacterCredentials
+          onDropsSaved={handleEventDropsSaved}
+        />
       ) : null}
 
       {isModalOpen ? (
